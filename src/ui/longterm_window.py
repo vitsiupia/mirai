@@ -274,6 +274,22 @@ class LongTermTaskBlock(QFrame):
             }
         """)
         
+        # Przycisk edycji
+        edit_button = QPushButton("✎")
+        edit_button.setFixedSize(22, 22)
+        edit_button.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                border: none;
+                color: #999;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                color: #4a90e2;
+            }
+        """)
+        edit_button.clicked.connect(lambda: self.edit_smart_goal(goal_data['id']))
+        
         delete_button = QPushButton("🗑")
         delete_button.setFixedSize(22, 22)
         delete_button.setStyleSheet("""
@@ -291,6 +307,7 @@ class LongTermTaskBlock(QFrame):
         
         header_layout.addWidget(title_label, stretch=1)
         header_layout.addWidget(progress_bar, stretch=2)
+        header_layout.addWidget(edit_button)
         header_layout.addWidget(delete_button)
         
         goal_layout.addWidget(header_widget)
@@ -328,6 +345,25 @@ class LongTermTaskBlock(QFrame):
             goal_layout.addWidget(subgoals_widget)
         
         self.tasks_layout.addWidget(goal_widget)
+
+    def edit_smart_goal(self, goal_id):
+        try:
+            # Pobierz pełne dane celu
+            with self.db_manager as db:
+                goal_data = db.get_smart_goal_details(goal_id)
+                
+            if goal_data:
+                # Otwórz dialog z załadowanymi danymi
+                dialog = SmartGoalsDialog(self.category_id, self, goal_data)
+                if dialog.exec_() == QDialog.Accepted:
+                    updated_data = dialog.get_smart_goal_data()
+                    with self.db_manager as db:
+                        if db.update_smart_goal(goal_id, updated_data):
+                            self.load_smart_goals()  # Odśwież widok
+                        else:
+                            QMessageBox.critical(self, "Błąd", "Nie udało się zaktualizować celu SMART")
+        except Exception as e:
+            QMessageBox.critical(self, "Błąd", f"Wystąpił błąd podczas edycji celu: {str(e)}")
 
 
     def show_add_smart_goal_dialog(self):

@@ -6,56 +6,57 @@ from PyQt5.QtGui import QFont
 from datetime import datetime
 
 class SmartGoalsDialog(QDialog):
-    def __init__(self, category_id, parent=None):
+    def __init__(self, category_id, parent=None, goal_data=None):
         super().__init__(parent)
         self.category_id = category_id
+        self.goal_data = goal_data
         self.setup_ui()
+        if goal_data:
+            self.load_goal_data(goal_data)
         
     def setup_ui(self):
         self.setWindowTitle("Cel SMART")
-        self.setMinimumWidth(600)
+        self.setMinimumWidth(450)  # Zmniejszona szerokość
         self.setStyleSheet("""
             QDialog {
                 background-color: #ffffff;
-                border-radius: 10px;
             }
             QLabel {
                 color: #333333;
-                font-size: 13px;
+                font-size: 11px;
                 font-weight: bold;
-                margin-top: 10px;
+                margin-top: 5px;
             }
             QLineEdit, QTextEdit {
-                padding: 8px;
-                border: 2px solid #e0e0e0;
-                border-radius: 6px;
+                padding: 5px;
+                border: 1px solid #e0e0e0;
+                border-radius: 4px;
                 background-color: #f8f9fa;
                 color: #333333;
-                font-size: 13px;
+                font-size: 11px;
             }
             QLineEdit:focus, QTextEdit:focus {
-                border: 2px solid #4a90e2;
+                border: 1px solid #4a90e2;
                 background-color: #ffffff;
             }
+            QPushButton {
+                padding: 5px 10px;
+                border-radius: 4px;
+                font-weight: bold;
+            }
             QComboBox {
-                padding: 8px;
-                border: 2px solid #e0e0e0;
-                border-radius: 6px;
+                padding: 5px;
+                border: 1px solid #e0e0e0;
+                border-radius: 4px;
                 background-color: #f8f9fa;
                 color: #333333;
-                font-size: 13px;
-            }
-            QPushButton {
-                padding: 8px 16px;
-                border-radius: 6px;
-                font-weight: bold;
-                min-width: 100px;
+                font-size: 11px;
             }
         """)
         
         layout = QVBoxLayout(self)
-        layout.setSpacing(15)
-        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(8)  # Zmniejszony spacing
+        layout.setContentsMargins(15, 15, 15, 15)  # Zmniejszone marginesy
 
         # Title
         title_label = QLabel("Nazwa celu:")
@@ -63,46 +64,43 @@ class SmartGoalsDialog(QDialog):
         self.title_edit.setPlaceholderText("Wprowadź nazwę celu...")
         
         # S - Specific
-        specific_label = QLabel("S (Specific) - Co dokładnie chcesz osiągnąć?")
+        specific_label = QLabel("S - Co dokładnie chcesz osiągnąć?")
         self.specific_edit = QTextEdit()
         self.specific_edit.setPlaceholderText("Opisz szczegółowo swój cel...")
-        self.specific_edit.setMaximumHeight(100)
+        self.specific_edit.setMaximumHeight(60)  # Zmniejszona wysokość
         
         # M - Measurable
-        measurable_label = QLabel("M (Measurable) - Jak zmierzysz postęp?")
+        measurable_label = QLabel("M - Jak zmierzysz postęp?")
         self.measurable_edit = QTextEdit()
         self.measurable_edit.setPlaceholderText("Jakie konkretne miary zastosujesz...")
-        self.measurable_edit.setMaximumHeight(100)
+        self.measurable_edit.setMaximumHeight(60)
         
         # A - Achievable
-        achievable_label = QLabel("A (Achievable) - Czy cel jest osiągalny?")
+        achievable_label = QLabel("A - Czy cel jest osiągalny?")
         self.achievable_edit = QTextEdit()
         self.achievable_edit.setPlaceholderText("Jakie zasoby są potrzebne...")
-        self.achievable_edit.setMaximumHeight(100)
+        self.achievable_edit.setMaximumHeight(60)
         
         # R - Relevant
-        relevant_label = QLabel("R (Relevant) - Dlaczego ten cel jest istotny?")
+        relevant_label = QLabel("R - Dlaczego ten cel jest istotny?")
         self.relevant_edit = QTextEdit()
         self.relevant_edit.setPlaceholderText("Jaki jest powód realizacji tego celu...")
-        self.relevant_edit.setMaximumHeight(100)
+        self.relevant_edit.setMaximumHeight(60)
         
         # T - Time-bound
-        time_label = QLabel("T (Time-bound) - Okres realizacji:")
+        time_label = QLabel("T - Okres realizacji:")
         self.time_combo = QComboBox()
         self.time_combo.addItems(["5-10 lat", "1 rok", "6 miesięcy", "3 miesiące", "1 miesiąc"])
-
-        # Sub-goals section
-        subgoals_label = QLabel("Podcele:")
-        self.subgoals_container = QWidget()
-        self.subgoals_layout = QVBoxLayout(self.subgoals_container)
         
-        # Add subgoal button
+        # Subgoals button
         self.add_subgoal_button = QPushButton("+ Dodaj podcel")
         self.add_subgoal_button.setStyleSheet("""
             QPushButton {
                 background-color: #f0f0f0;
                 border: none;
                 color: #666;
+                font-size: 11px;
+                padding: 3px 8px;
             }
             QPushButton:hover {
                 background-color: #e0e0e0;
@@ -110,20 +108,15 @@ class SmartGoalsDialog(QDialog):
         """)
         self.add_subgoal_button.clicked.connect(self.add_subgoal)
 
-        # Create scroll area for subgoals
-        scroll = QScrollArea()
-        scroll.setWidget(self.subgoals_container)
-        scroll.setWidgetResizable(True)
-        scroll.setMaximumHeight(150)
-
-        # Buttons
+        # Przyciski
         buttons_layout = QHBoxLayout()
         self.cancel_button = QPushButton("Anuluj")
         self.cancel_button.setStyleSheet("""
             QPushButton {
                 background-color: #f8f9fa;
-                border: 2px solid #e0e0e0;
+                border: 1px solid #e0e0e0;
                 color: #666666;
+                font-size: 11px;
             }
             QPushButton:hover {
                 background-color: #e9ecef;
@@ -135,6 +128,7 @@ class SmartGoalsDialog(QDialog):
                 background-color: #4a90e2;
                 border: none;
                 color: white;
+                font-size: 11px;
             }
             QPushButton:hover {
                 background-color: #357abd;
@@ -148,7 +142,14 @@ class SmartGoalsDialog(QDialog):
         buttons_layout.addWidget(self.cancel_button)
         buttons_layout.addWidget(self.save_button)
 
-        # Add everything to main layout
+        # Kontener na podcele (początkowo ukryty)
+        self.subgoals_container = QWidget()
+        self.subgoals_layout = QVBoxLayout(self.subgoals_container)
+        self.subgoals_layout.setContentsMargins(0, 0, 0, 0)
+        self.subgoals_layout.setSpacing(5)
+        self.subgoals_container.hide()
+
+        # Add all widgets to layout
         layout.addWidget(title_label)
         layout.addWidget(self.title_edit)
         layout.addWidget(specific_label)
@@ -161,26 +162,121 @@ class SmartGoalsDialog(QDialog):
         layout.addWidget(self.relevant_edit)
         layout.addWidget(time_label)
         layout.addWidget(self.time_combo)
-        layout.addWidget(subgoals_label)
-        layout.addWidget(scroll)
         layout.addWidget(self.add_subgoal_button)
+        layout.addWidget(self.subgoals_container)
         layout.addLayout(buttons_layout)
 
     def add_subgoal(self):
+        """Adds a new subgoal input field."""
+        self.subgoals_container.show()  # Pokaż kontener gdy dodajemy pierwszy podcel
+        
         subgoal_widget = QWidget()
         subgoal_layout = QHBoxLayout(subgoal_widget)
+        subgoal_layout.setContentsMargins(0, 0, 0, 0)
+        subgoal_layout.setSpacing(5)  # Dodane spacing między elementami
         
         checkbox = QCheckBox()
+        checkbox.setStyleSheet("QCheckBox { spacing: 4px; }")
+        
         subgoal_edit = QLineEdit()
         subgoal_edit.setPlaceholderText("Wpisz podcel...")
+        subgoal_edit.setStyleSheet("""
+            QLineEdit {
+                padding: 4px;
+                font-size: 11px;
+            }
+        """)
         
-        delete_button = QPushButton("🗑")
-        delete_button.setFixedSize(24, 24)
+        delete_button = QPushButton("✖")  # Zmieniony symbol na ✖
+        delete_button.setFixedSize(20, 20)
         delete_button.setStyleSheet("""
             QPushButton {
                 background-color: transparent;
                 border: none;
                 color: #999;
+                font-size: 14px;
+                padding: 0px;
+                margin: 0px;
+            }
+            QPushButton:hover {
+                color: #ff4444;
+                font-weight: bold;
+            }
+        """)
+        delete_button.setCursor(Qt.PointingHandCursor)  # Dodany kursor wskazujący
+        delete_button.clicked.connect(lambda: subgoal_widget.deleteLater())
+        
+        subgoal_layout.addWidget(checkbox)
+        subgoal_layout.addWidget(subgoal_edit, stretch=1)
+        subgoal_layout.addWidget(delete_button)
+        
+        self.subgoals_layout.addWidget(subgoal_widget)
+
+    def get_subgoals(self):
+        """Gets all subgoals data."""
+        subgoals = []
+        for i in range(self.subgoals_layout.count()):
+            widget = self.subgoals_layout.itemAt(i).widget()
+            if widget:
+                checkbox = widget.findChild(QCheckBox)
+                edit = widget.findChild(QLineEdit)
+                if checkbox and edit and edit.text().strip():
+                    subgoals.append({
+                        'title': edit.text().strip(),
+                        'completed': checkbox.isChecked()
+                    })
+        return subgoals
+
+    def get_smart_goal_data(self):
+        return {
+            'title': self.title_edit.text().strip(),
+            'category_id': self.category_id,
+            'specific': self.specific_edit.toPlainText().strip(),
+            'measurable': self.measurable_edit.toPlainText().strip(),
+            'achievable': self.achievable_edit.toPlainText().strip(),
+            'relevant': self.relevant_edit.toPlainText().strip(),
+            'time_bound': self.time_combo.currentText(),
+            'subgoals': self.get_subgoals()
+        }
+
+    def load_goal_data(self, goal_data):
+        """Loads existing goal data into the dialog."""
+        self.setWindowTitle("Edytuj cel SMART")
+        self.title_edit.setText(goal_data['title'])
+        self.specific_edit.setPlainText(goal_data['specific'])
+        self.measurable_edit.setPlainText(goal_data['measurable'])
+        self.achievable_edit.setPlainText(goal_data['achievable'])
+        self.relevant_edit.setPlainText(goal_data['relevant'])
+        
+        period_index = self.time_combo.findText(goal_data['time_bound'])
+        if period_index >= 0:
+            self.time_combo.setCurrentIndex(period_index)
+            
+        if goal_data['subgoals']:
+            self.subgoals_container.show()
+            for subgoal in goal_data['subgoals']:
+                self.add_subgoal_with_data(subgoal)
+
+    def add_subgoal_with_data(self, subgoal_data):
+        """Adds a new subgoal input field with existing data."""
+        subgoal_widget = QWidget()
+        subgoal_layout = QHBoxLayout(subgoal_widget)
+        subgoal_layout.setContentsMargins(0, 0, 0, 0)
+        
+        checkbox = QCheckBox()
+        checkbox.setChecked(subgoal_data.get('completed', False))
+        
+        subgoal_edit = QLineEdit()
+        subgoal_edit.setText(subgoal_data['title'])
+        
+        delete_button = QPushButton("🗑")
+        delete_button.setFixedSize(20, 20)
+        delete_button.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                border: none;
+                color: #999;
+                font-size: 12px;
             }
             QPushButton:hover {
                 color: #ff4444;
@@ -193,43 +289,3 @@ class SmartGoalsDialog(QDialog):
         subgoal_layout.addWidget(delete_button)
         
         self.subgoals_layout.addWidget(subgoal_widget)
-
-    def get_subgoals(self):
-        subgoals = []
-        for i in range(self.subgoals_layout.count()):
-            widget = self.subgoals_layout.itemAt(i).widget()
-            if widget:
-                checkbox = widget.findChild(QCheckBox)
-                edit = widget.findChild(QLineEdit)
-                if checkbox and edit:
-                    subgoals.append({
-                        'title': edit.text(),
-                        'completed': checkbox.isChecked()
-                    })
-        return subgoals
-
-    def get_smart_goal_data(self):
-    # Zbierz wszystkie podczęści
-        subgoals = []
-        for i in range(self.subgoals_layout.count()):
-            widget = self.subgoals_layout.itemAt(i).widget()
-            if widget:
-                checkbox = widget.findChild(QCheckBox)
-                edit = widget.findChild(QLineEdit)
-                if checkbox and edit and edit.text().strip():  # Sprawdź czy tekst nie jest pusty
-                    subgoals.append({
-                        'title': edit.text().strip(),
-                        'completed': checkbox.isChecked()
-                    })
-
-        # Zwróć kompletne dane celu SMART
-        return {
-            'title': self.title_edit.text().strip(),
-            'category_id': self.category_id,
-            'specific': self.specific_edit.toPlainText().strip(),
-            'measurable': self.measurable_edit.toPlainText().strip(),
-            'achievable': self.achievable_edit.toPlainText().strip(),
-            'relevant': self.relevant_edit.toPlainText().strip(),
-            'time_bound': self.time_combo.currentText(),
-            'subgoals': subgoals
-        }

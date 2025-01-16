@@ -337,3 +337,115 @@ class DatabaseManager:
         self.cursor.execute(query, (progress, goal_id))
         self.connection.commit()
         return self.cursor.rowcount > 0
+    
+    def update_smart_goal(self, goal_id: int, goal_data: dict) -> bool:
+        """Updates an existing SMART goal and its subgoals."""
+        try:
+            # Update main task
+            task_query = """
+            UPDATE tasks 
+            SET title = ?,
+                period = ?
+            WHERE id = ?
+            """
+            self.cursor.execute(task_query, (
+                goal_data['title'],
+                goal_data['time_bound'],
+                goal_id
+            ))
+
+            # Update SMART goal details
+            smart_query = """
+            UPDATE smart_goals 
+            SET specific = ?,
+                measurable = ?,
+                achievable = ?,
+                relevant = ?,
+                time_bound = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE task_id = ?
+            """
+            self.cursor.execute(smart_query, (
+                goal_data['specific'],
+                goal_data['measurable'],
+                goal_data['achievable'],
+                goal_data['relevant'],
+                goal_data['time_bound'],
+                goal_id
+            ))
+
+            # Delete existing subgoals
+            self.cursor.execute("DELETE FROM tasks WHERE parent_id = ?", (goal_id,))
+
+            # Add updated subgoals
+            if goal_data.get('subgoals'):
+                subgoal_query = """
+                INSERT INTO tasks (
+                    title, category_id, parent_id, status, period
+                ) VALUES (?, ?, ?, ?, ?)
+                """
+                for subgoal in goal_data['subgoals']:
+                    status = 'completed' if subgoal.get('completed', False) else 'active'
+                    self.cursor.execute(subgoal_query, (
+                        subgoal['title'],
+                        goal_data['category_id'],
+                        goal_id,
+                        status,
+                        goal_data['time_bound']
+                    ))
+
+            self.connection.commit()
+            return True
+
+        except Exception as e:
+            print(f"Error updating SMART goal: {e}")
+            self.connection.rollback()
+            return False
+
+    def get_smart_goal_details(self, goal_id: int) -> Dict:
+        """Gets full details of a SMART goal including subgoals."""
+        # Get main goal data
+        query = """
+        SELECT 
+            t.title,
+            t.category_id,
+            s.specific,
+            s.measurable,
+            s.achievable,
+            s.relevant,
+            s.time_bound,
+            t.period
+        FROM tasks t
+        JOIN smart_goals s ON t.id = s.task_id
+        WHERE t.id = ? AND t.status != 'deleted'
+        """
+        self.cursor.execute(query, (goal_id,))
+        row = self.cursor.fetchone()
+        
+        if not row:
+            return None
+            
+        # Get subgoals
+        subgoal_query = """
+        SELECT id, title, status
+        FROM tasks
+        WHERE parent_id = ? AND status != 'deleted'
+        """
+        self.cursor.execute(subgoal_query, (goal_id,))
+        subgoals = [{
+            'title': sub[1],
+            'completed': sub[2] == 'completed'
+        } for sub in self.cursor.fetchall()]
+        
+        return {
+            'id': goal_id,
+            'title': row[0],
+            'category_id': row[1],
+            'specific': row[2],
+            'measurable': row[3],
+            'achievable': row[4],
+            'relevant': row[5],
+            'time_bound': row[6],
+            'period': row[7],
+            'subgoals': subgoals
+        }
