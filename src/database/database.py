@@ -449,3 +449,63 @@ class DatabaseManager:
             'period': row[7],
             'subgoals': subgoals
         }
+    
+    def add_reflection(self, category_id: int, content: str) -> int:
+        """Dodaje nową refleksję dla kategorii."""
+        query = """
+        INSERT INTO reflections (category_id, content)
+        VALUES (?, ?)
+        """
+        self.cursor.execute(query, (category_id, content))
+        self.connection.commit()
+        return self.cursor.lastrowid
+
+    def update_reflection(self, category_id: int, content: str) -> bool:
+        """Aktualizuje istniejącą refleksję dla kategorii."""
+        query = """
+        UPDATE reflections 
+        SET content = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE category_id = ?
+        """
+        self.cursor.execute(query, (content, category_id))
+        self.connection.commit()
+        return self.cursor.rowcount > 0
+
+    def get_reflection(self, category_id: int) -> Optional[Dict]:
+        """Pobiera refleksję dla danej kategorii."""
+        query = """
+        SELECT id, content, created_at, updated_at
+        FROM reflections
+        WHERE category_id = ?
+        """
+        self.cursor.execute(query, (category_id,))
+        row = self.cursor.fetchone()
+        if row:
+            return {
+                'id': row[0],
+                'content': row[1],
+                'created_at': row[2],
+                'updated_at': row[3]
+            }
+        return None
+
+    def get_all_reflections(self) -> List[Dict]:
+        """Pobiera wszystkie refleksje wraz z nazwami kategorii."""
+        query = """
+        SELECT r.id, r.category_id, c.name, r.content, r.created_at, r.updated_at
+        FROM reflections r
+        JOIN categories c ON r.category_id = c.id
+        ORDER BY c.sort_order
+        """
+        self.cursor.execute(query)
+        reflections = []
+        for row in self.cursor.fetchall():
+            reflections.append({
+                'id': row[0],
+                'category_id': row[1],
+                'category_name': row[2],
+                'content': row[3],
+                'created_at': row[4],
+                'updated_at': row[5]
+            })
+        return reflections

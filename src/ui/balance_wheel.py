@@ -1,3 +1,4 @@
+import os
 import sys
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
                            QLabel, QFrame, QSlider, QSpinBox)
@@ -9,6 +10,7 @@ from matplotlib.figure import Figure
 import numpy as np
 from datetime import datetime
 
+from .reflection_notebook import ReflectionNotebook
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QTextEdit, QPushButton
 
 class BalanceWheel(QWidget):
@@ -22,73 +24,187 @@ class BalanceWheel(QWidget):
         
     def setup_ui(self):
         main_layout = QHBoxLayout(self)
+        main_layout.setSpacing(20)  # Zwiększony odstęp między panelami
         
-        # Lewy panel z wykresem (powiększony)
+        # Lewy panel z wykresem (zmniejszony)
         left_panel = QFrame()
+        left_panel.setStyleSheet("""
+            QFrame {
+                background-color: white;
+                border-radius: 15px;
+                padding: 15px;
+                margin: 10px;
+                border: 1px solid #e0e0e0;
+            }
+        """)
         left_layout = QVBoxLayout(left_panel)
-        left_panel.setMinimumWidth(500)  # Zwiększona minimalna szerokość
+        left_panel.setMinimumWidth(800)  # Zmniejszona minimalna szerokość
+        left_panel.setMaximumWidth(850)  # Maksymalna szerokość
         
         # Tworzenie wykresu
-        self.figure = Figure(figsize=(6, 6))  # Zwiększony rozmiar wykresu
+        self.figure = Figure(figsize=(4, 4))  # Zmniejszony rozmiar wykresu
         self.canvas = FigureCanvas(self.figure)
         left_layout.addWidget(self.canvas)
         
-        main_layout.addWidget(left_panel)
-        
-        # Dodanie przycisku "Skala Ocen"
+        # Przycisk "Skala Ocen"
         scale_button = QPushButton("Skala Ocen")
+        scale_button.setStyleSheet("""
+            QPushButton {
+                background-color: #f8f9fa;
+                border: none;
+                border-radius: 5px;
+                padding: 8px 15px;
+                color: #4a90e2;
+                font-weight: 500;
+                font-family: 'Segoe UI';
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #e9ecef;
+            }
+        """)
+        scale_button.setCursor(Qt.PointingHandCursor)
         scale_button.clicked.connect(self.show_scale_description)
         left_layout.addWidget(scale_button)
+        
+        main_layout.addWidget(left_panel)
 
-        # Prawy panel z kontrolkami (zmniejszony)
-        right_panel = QFrame()
-        right_panel.setStyleSheet("""
+        # Środkowy panel z kontrolkami
+        middle_panel = QFrame()
+        middle_panel.setStyleSheet("""
             QFrame {
                 background-color: white;
-                border-radius: 10px;
-                padding: 15px;
+                border-radius: 25px;
+                padding: 20px;
                 margin: 10px;
-                max-width: 350px;
+                border: 1px solid #e0e0e0;
             }
             QLabel {
                 font-family: 'Segoe UI';
-            }
-            QSpinBox {
-                border: 1px solid #E0E0E0;
-                border-radius: 4px;
-                padding: 5px;
-                min-width: 60px;
-                min-height: 25px;
-                font-size: 12px;
-            }
-            QSpinBox:hover {
-                border-color: #4a90e2;
+                color: #333;
             }
         """)
-        right_layout = QVBoxLayout(right_panel)
-        right_layout.setSpacing(10)
-        
-        # Nagłówki (przesunięte w lewo, mniejsza czcionka)
-        header_layout = QVBoxLayout()
-        header_layout.setAlignment(Qt.AlignLeft)
+        middle_panel.setMinimumWidth(200)  # Zmniejszona szerokość
+        middle_panel.setMaximumWidth(500)  # Zmniejszona maksymalna szerokość
+        middle_layout = QVBoxLayout(middle_panel)
+        middle_layout.setSpacing(10)
+        middle_layout.setContentsMargins(20, 20, 20, 20)
+
+        # Nagłówek w kontenerze
+        header_container = QFrame()
+        header_container.setStyleSheet("""
+            QFrame {
+                background-color: transparent;
+                margin-bottom: 5px;
+                padding: 10px;
+                margin-bottom: 15px;
+            }
+        """)
+        header_layout = QVBoxLayout(header_container)
+        header_layout.setSpacing(8)
         
         title = QLabel("POZIOM ZADOWOLENIA Z ŻYCIA")
-        title.setFont(QFont("Segoe UI", 14, QFont.Bold))
+        title.setFont(QFont("Segoe UI", 12, QFont.Bold))
+        title.setWordWrap(True)
         header_layout.addWidget(title)
         
         description = QLabel("Na ile oceniasz swoje zadowolenie z życia w poszczególnych kategoriach od 1 do 10?")
         description.setFont(QFont("Segoe UI", 10))
+        description.setWordWrap(True)
+        description.setStyleSheet("color: #666;")
         header_layout.addWidget(description)
         
-        right_layout.addLayout(header_layout)
+        middle_layout.addWidget(header_container)
         
-        # Kontener na kategorie
+        # Kontener na kategorie z przewijaniem
         self.categories_container = QVBoxLayout()
-        self.categories_container.setSpacing(8)
-        right_layout.addLayout(self.categories_container)
+        self.categories_container.setSpacing(12)
+        middle_layout.addLayout(self.categories_container)
         
-        right_layout.addStretch()
+        middle_layout.addStretch()
+        
+        main_layout.addWidget(middle_panel)
+        
+        # Dodanie elastycznej przestrzeni, która przesunie panele w lewo
+        main_layout.addStretch(1)
+
+        # Prawy panel z notatnikiem refleksji
+        right_panel = ReflectionNotebook(self.db_manager)
+        right_panel.setMinimumWidth(600)  # Minimalna szerokość
+        right_panel.setMaximumWidth(650)  # Maksymalna szerokość
         main_layout.addWidget(right_panel)
+
+    def create_category_widget(self, category, score):
+        # Główny kontener
+        container = QWidget()
+        container.setFixedHeight(50)  # Ustaw stałą wysokość
+        container.setStyleSheet("""
+            QWidget {
+                background-color: #f8f9fa;
+                border-radius: 8px;
+            }
+        """)
+        
+        # Układ poziomy
+        layout = QHBoxLayout(container)
+        layout.setContentsMargins(15, 5, 15, 5)
+        layout.setSpacing(15)
+        
+        # Container dla nazwy kategorii - ustaw stałą szerokość
+        name_container = QWidget()
+        name_container.setFixedWidth(250)  # Stała szerokość dla wszystkich nazw
+        name_layout = QHBoxLayout(name_container)
+        name_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Nazwa kategorii
+        name_label = QLabel(category['name'])
+        name_label.setFont(QFont("Segoe UI", 11))
+        name_label.setStyleSheet("""
+            QLabel {
+                color: #333333;
+                background-color: transparent;
+            }
+        """)
+        name_layout.addWidget(name_label)
+        name_layout.addStretch()  # Dodaje elastyczną przestrzeń po prawej stronie nazwy
+        
+        # Dodaj container z nazwą do głównego layoutu
+        layout.addWidget(name_container)
+        
+        # SpinBox dla oceny
+        spinbox = QSpinBox()
+        spinbox.setStyleSheet("""
+            QSpinBox {
+                background-color: white;
+                border: 1px solid #dddddd;
+                border-radius: 4px;
+                padding: 5px;
+                min-width: 60px;
+                max-width: 60px;
+                min-height: 30px;
+            }
+            QSpinBox:hover {
+                border: 1px solid #4a90e2;
+            }
+            QSpinBox::up-button, QSpinBox::down-button {
+                border: none;
+                background: transparent;
+                width: 15px;
+            }
+        """)
+        spinbox.setMinimum(1)
+        spinbox.setMaximum(10)
+        spinbox.setValue(score)
+        spinbox.setAlignment(Qt.AlignCenter)
+        layout.addWidget(spinbox)
+        
+        # Automatyczne zapisywanie i aktualizacja przy zmianie wartości
+        spinbox.valueChanged.connect(lambda value: self.save_and_update(category['id'], value))
+        
+        # Dodaj wypełniacz po prawej stronie
+        layout.addStretch()
+        
+        return container
         
     def show_scale_description(self):
         # Tworzenie okna dialogowego z opisem skali ocen
@@ -131,32 +247,7 @@ class BalanceWheel(QWidget):
         
         dialog.exec_()
     
-    def create_category_widget(self, category, score):
-        frame = QFrame()
-        layout = QHBoxLayout(frame)
-        layout.setContentsMargins(5, 5, 5, 5)  # Dodanie marginesów
-        layout.setSpacing(10)  # Odstępy między elementami
-        
-        # Nazwa kategorii
-        name_label = QLabel(category['name'])
-        name_label.setFont(QFont("Segoe UI", 11))
-        name_label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)  # Wyrównanie tekstu
-        name_label.setMinimumHeight(25)  # Minimalna wysokość etykiety
-        layout.addWidget(name_label)
-        
-        # SpinBox dla oceny
-        spinbox = QSpinBox()
-        spinbox.setMinimum(1)
-        spinbox.setMaximum(10)
-        spinbox.setValue(score)
-        spinbox.setAlignment(Qt.AlignCenter)
-        spinbox.setFixedWidth(80)  # Ograniczenie szerokości SpinBox
-        layout.addWidget(spinbox)
-        
-        # Automatyczne zapisywanie i aktualizacja przy zmianie wartości
-        spinbox.valueChanged.connect(lambda value: self.save_and_update(category['id'], value))
     
-        return frame
 
     def load_data(self):
         with self.db_manager as db:
@@ -208,7 +299,7 @@ class BalanceWheel(QWidget):
         values.append(values[0])
         angles = np.concatenate((angles, [angles[0]]))
         
-        # Tworzenie wykresu
+        # Tworzenie wykresu z większymi marginesami
         ax = self.figure.add_subplot(111, projection='polar')
         
         # Rysowanie wykresu
@@ -223,8 +314,15 @@ class BalanceWheel(QWidget):
         
         # Ustawienia wykresu
         ax.set_thetagrids(angles[:-1] * 180/np.pi, labels)
-        ax.set_ylim(0, 10)
+        ax.set_ylim(0, 12)  # Zwiększamy górny limit, aby etykiety miały więcej miejsca
         ax.grid(True)
+        
+        # Dostosowanie pozycji etykiet
+        ax.tick_params(pad=20)  # Zwiększamy odległość etykiet od wykresu
+        
+        # Ustawienie większego marginesu dla całego wykresu
+        self.figure.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
+        
         ax.set_facecolor('#f8f9fa')
         self.figure.patch.set_facecolor('#ffffff')
         

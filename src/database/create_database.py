@@ -99,6 +99,21 @@ def create_database():
     )
     """)
 
+    # Dodaj po utworzeniu innych tabel, przed commitowaniem zmian:
+    print("Tworzenie tabeli reflections...")
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS reflections (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        category_id INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+    )
+    """)
+
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_reflections_category ON reflections(category_id)")
+
     print("Tworzenie indeksów...")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_category ON tasks(category_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)")
