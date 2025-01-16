@@ -12,13 +12,28 @@ from src.database.database import DatabaseManager
 from src.ui.balance_wheel import BalanceWheel
 from src.ui.longterm_window import LongTermWindow  # Dodany import
 from datetime import datetime
+from src.ui.smart_goals_dialog import SmartGoalsDialog
 
 class TaskDialog(QDialog):
     def __init__(self, category_id, parent=None):
         super().__init__(parent)
         self.category_id = category_id
         self.setup_ui()
+    
+    def open_smart_goal_dialog(self):
+        """Otwiera okno formularza celu SMART z wstępnie wypełnionymi danymi z aktualnego formularza."""
+        dialog = SmartGoalsDialog(self.category_id, self)
+        dialog.title_edit.setText(self.title_edit.text())
+        dialog.specific_edit.setPlainText(self.description_edit.toPlainText())
         
+        if dialog.exec_() == QDialog.Accepted:
+            smart_goal_data = dialog.get_smart_goal_data()
+            parent_window = self.parent()
+            if parent_window and hasattr(parent_window, 'db_manager'):
+                with parent_window.db_manager as db:
+                    db.add_smart_goal(smart_goal_data)
+            self.reject()  # Zamknij okno zwykłego zadania
+
     def setup_ui(self):
         self.setWindowTitle("Nowe zadanie")
         self.setMinimumWidth(450)
@@ -211,9 +226,32 @@ class TaskDialog(QDialog):
         """)
         self.save_button.clicked.connect(self.accept)
         
+        # Przycisk SMART
+        self.smart_button = QPushButton("Dodaj jako cel SMART")
+        self.smart_button.setMinimumHeight(40)
+        self.smart_button.setStyleSheet("""
+            QPushButton {
+                background-color: #28a745;
+                border: none;
+                border-radius: 6px;
+                color: white;
+                font-weight: bold;
+                padding: 8px 16px;
+                min-width: 100px;
+            }
+            QPushButton:hover {
+                background-color: #218838;
+            }
+            QPushButton:pressed {
+                background-color: #1e7e34;
+            }
+        """)
+        self.smart_button.clicked.connect(self.open_smart_goal_dialog)
+        
         buttons_layout.addStretch()
         buttons_layout.addWidget(self.cancel_button)
         buttons_layout.addWidget(self.save_button)
+        buttons_layout.addWidget(self.smart_button)
         
         # Dodawanie wszystkich elementów do głównego layoutu
         main_layout.addWidget(form_container)
@@ -290,7 +328,7 @@ class TaskBlock(QFrame):
             self.layout.addWidget(tasks_container)
             
             # Przycisk dodawania na dole
-            add_button = QPushButton("+ Dodaj zadanie")
+            add_button = QPushButton("+ Dodaj nowy cel")
             add_button.setStyleSheet("""
                 QPushButton {
                     background-color: #f0f0f0;
