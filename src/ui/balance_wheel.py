@@ -9,7 +9,11 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import numpy as np
 from datetime import datetime
-
+import matplotlib
+import matplotlib
+matplotlib.rcParams['font.family'] = ['Segoe UI Emoji', 'Arial', 'DejaVu Sans']
+matplotlib.rcParams['font.sans-serif'] = ['Segoe UI Emoji', 'Arial', 'DejaVu Sans']
+matplotlib.rcParams['axes.unicode_minus'] = False
 from .reflection_notebook import ReflectionNotebook
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QTextEdit, QPushButton
 

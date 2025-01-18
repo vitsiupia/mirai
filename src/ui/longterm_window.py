@@ -10,6 +10,8 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 from datetime import datetime
 
+
+
 class LongTermTaskDialog(QDialog):
     def __init__(self, category_id, period, parent=None):
         super().__init__(parent)
@@ -270,13 +272,13 @@ class LongTermTaskBlock(QFrame):
                 text-align: center;
             }
             QProgressBar::chunk {
-                background-color: #4caf50;
+                background-color: #8bd88e;
                 border-radius: 4px;
             }
         """)
         
         # Przycisk edycji
-        edit_button = QPushButton("✎")
+        edit_button = QPushButton("🖊️")
         edit_button.setFixedSize(22, 22)
         edit_button.setStyleSheet("""
             QPushButton {
@@ -446,9 +448,47 @@ class LongTermWindow(QMainWindow):
         self.main_container.setStyleSheet("""
             #mainTaskContainer {
                 background-color: white;
-                border-radius: 15px;
+                border-radius: 50px;
                 padding: 20px;
                 margin: 0px;
+            }
+            QScrollBar:vertical {
+                width: 8px;
+                background: transparent;
+                margin: 0px;
+            }
+            QScrollBar::handle:vertical {
+                background-color: #c1c1c1;
+                min-height: 30px;
+                border-radius: 4px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background-color: #a8a8a8;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+                background: none;
+            }
+            QScrollBar:horizontal {
+                height: 8px;
+                background: transparent;
+                margin: 0px;
+            }
+            QScrollBar::handle:horizontal {
+                background-color: #c1c1c1;
+                min-width: 30px;
+                border-radius: 4px;
+            }
+            QScrollBar::handle:horizontal:hover {
+                background-color: #a8a8a8;
+            }
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+                width: 0px;
+            }
+            QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+                background: none;
             }
         """)
         
@@ -459,39 +499,65 @@ class LongTermWindow(QMainWindow):
         self.header_container = QWidget()
         self.header_layout = QHBoxLayout(self.header_container)
         self.header_layout.setSpacing(15)
-        self.header_layout.setContentsMargins(0, 0, 0, 10)
+        self.header_layout.setContentsMargins(0, 0, 0, 0)
         self.header_layout.setAlignment(Qt.AlignCenter)
-        
-        self.period_header = QLabel("Plan na okres:")
+
+        # Period header label
+        self.period_header = QLabel("Plan na:")
         self.period_header.setFont(QFont("Segoe UI", 24, QFont.Bold))
-        self.period_header.setStyleSheet("color: #333333;")
-        
+        self.period_header.setStyleSheet("""
+            color: #2c3e50;
+        """)
+
+        # Modern Combobox
         self.period_combo = QComboBox()
         self.period_combo.addItems(["5-10 lat", "1 rok", "6 miesięcy", "3 miesiące"])
-        self.period_combo.setStyleSheet("""
-            QComboBox {
-                background-color: white;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                padding: 5px 10px;
-                min-width: 150px;
-                font-size: 16px;
-                height: 35px;
-            }
-            QComboBox::drop-down {
-                border: none;
-                padding-right: 20px;
-            }
-        """)
-        self.period_combo.setFixedWidth(150)
         
+        self.period_combo.setStyleSheet("""
+        QComboBox {
+            background-color: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 8px;
+            min-width: 180px;
+            font-size: 20px;
+            color: #2c3e50;
+        }
+    
+        QComboBox::drop-down {
+            subcontrol-origin: padding;
+            subcontrol-position: top right;
+            width: 40px;
+            
+            border-top-right-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
+        
+        QComboBox::down-arrow {
+            width: 20px;
+            height: 20px;
+            color: #2c3e50;
+        }
+    """)
+
+
+        self.period_combo.setEditable(True)
+        self.period_combo.lineEdit().setAlignment(Qt.AlignCenter)
+        self.period_combo.setEditable(False)
+
+        # Optional: Add some additional customization
+        self.period_combo.setFixedWidth(200)
+        self.period_combo.setEditable(False)
+
+        # Add widgets to layout
         self.header_layout.addWidget(self.period_header)
         self.header_layout.addWidget(self.period_combo)
-        
+
+        # Add to main container
         self.main_container_layout.addWidget(self.header_container)
         self.main_container_layout.setAlignment(self.header_container, Qt.AlignCenter)
 
-        # Scroll area
+            # Scroll area
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -500,7 +566,7 @@ class LongTermWindow(QMainWindow):
         self.scroll_widget = QWidget()
         self.scroll_layout = QGridLayout(self.scroll_widget)
         self.scroll_layout.setSpacing(20)
-        self.scroll_layout.setContentsMargins(20, 0, 20, 20)
+        self.scroll_layout.setContentsMargins(20, 20, 20, 20)
         self.scroll_layout.setColumnMinimumWidth(0, 480)
         self.scroll_layout.setColumnMinimumWidth(1, 480)
         self.scroll_layout.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
