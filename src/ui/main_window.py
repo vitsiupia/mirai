@@ -13,6 +13,8 @@ from src.ui.balance_wheel import BalanceWheel
 from src.ui.longterm_window import LongTermWindow  # Dodany import
 from datetime import datetime
 from src.ui.smart_goals_dialog import SmartGoalsDialog
+from datetime import datetime, timedelta
+from PyQt5.QtCore import pyqtSignal
 
 class TaskDialog(QDialog):
     def __init__(self, category_id, parent=None):
@@ -277,11 +279,12 @@ class TaskDialog(QDialog):
         super().accept()
 
 class TaskBlock(QFrame):
-    def __init__(self, category_id, category_name, db_manager, parent=None):
+    def __init__(self, category_id, category_name, db_manager, selected_date, parent=None):
         super().__init__(parent)
         self.category_id = category_id
         self.category_name = category_name
         self.db_manager = db_manager
+        self.selected_date = selected_date  # DateTime object
         self.setup_ui()
         self.load_tasks()
 
@@ -345,8 +348,20 @@ class TaskBlock(QFrame):
             self.layout.addWidget(add_button)
 
     def load_tasks(self):
-        with self.db_manager as db:  # Użycie context managera
-            tasks = db.get_tasks_by_category(self.category_id)
+        # Oblicz pierwszy i ostatni dzień wybranego miesiąca
+        first_day = self.selected_date.replace(day=1)
+        if self.selected_date.month == 12:
+            last_day = self.selected_date.replace(year=self.selected_date.year + 1, month=1, day=1)
+        else:
+            last_day = self.selected_date.replace(month=self.selected_date.month + 1, day=1)
+        last_day = last_day - timedelta(days=1)
+
+        with self.db_manager as db:
+            tasks = db.get_tasks_by_category_and_date_range(
+                self.category_id,
+                first_day.strftime('%Y-%m-%d'),
+                last_day.strftime('%Y-%m-%d')
+            )
             
         # Usuń istniejące zadania z layoutu
         for i in reversed(range(self.tasks_layout.count())): 
@@ -358,17 +373,12 @@ class TaskBlock(QFrame):
         for task in tasks:
             self.add_task_widget(task)
 
+
     def add_task_widget(self, task_data):
         task_widget = QWidget()
         task_layout = QHBoxLayout(task_widget)
-        task_widget.setStyleSheet("""
-            QWidget {
-                border-radius: 5px;
-            }
-            QWidget:hover {
-                background-color: #f0f0f0;
-            }
-        """)
+        task_layout.setContentsMargins(0, 0, 0, 0)
+        task_layout.setSpacing(5)
         
         checkbox = QCheckBox()
         checkbox.setChecked(task_data['status'] == 'completed')
@@ -379,9 +389,17 @@ class TaskBlock(QFrame):
         task_content_layout.setSpacing(2)
         task_content_layout.setContentsMargins(0, 0, 0, 0)
         
-        task_label = QLabel(task_data['title'])
+        # Dodaj ikonę lub oznaczenie dla celu SMART
+        title_text = task_data['title']
+        if task_data.get('is_smart_goal'):
+            title_text = "🎯 " + title_text  # Dodaj ikonkę celu
+        
+        task_label = QLabel(title_text)
         if task_data['status'] == 'completed':
             task_label.setStyleSheet("text-decoration: line-through; color: #888;")
+        else:
+            task_label.setStyleSheet("font-weight: bold;" if task_data.get('is_smart_goal') else "")
+            
         task_content_layout.addWidget(task_label)
         
         # Dodaj datę, jeśli istnieje
@@ -391,9 +409,13 @@ class TaskBlock(QFrame):
             deadline_label.setStyleSheet("color: #666; font-size: 11px;")
             task_content_layout.addWidget(deadline_label)
         
-        # Dodaj obsługę kliknięcia dla widgetu zadania
+        # Dodaj obsługę kliknięcia
         task_content.mousePressEvent = lambda e: self.show_task_details(task_data)
         
+        task_layout.addWidget(checkbox)
+        task_layout.addWidget(task_content, stretch=1)
+        
+        # Dodaj przycisk usuwania
         delete_button = QPushButton("🗑")
         delete_button.setFixedSize(24, 24)
         delete_button.setStyleSheet("""
@@ -408,8 +430,6 @@ class TaskBlock(QFrame):
         """)
         delete_button.clicked.connect(lambda: self.delete_task(task_data['id']))
         
-        task_layout.addWidget(checkbox)
-        task_layout.addWidget(task_content, stretch=1)
         task_layout.addWidget(delete_button)
         
         self.tasks_layout.addWidget(task_widget)
@@ -441,7 +461,78 @@ class TaskBlock(QFrame):
         with self.db_manager as db:  # Użycie context managera
             db.delete_task(task_id)
         self.load_tasks()
-
+class MonthYearSelector(QWidget):
+    month_changed = pyqtSignal(datetime)
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.current_date = datetime.now()
+        self.setup_ui()
+        
+    def setup_ui(self):
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
+        
+        # Przycisk poprzedniego miesiąca
+        self.prev_button = QPushButton("←")
+        self.prev_button.setFixedSize(40, 40)
+        self.prev_button.clicked.connect(self.previous_month)
+        self.prev_button.setStyleSheet("""
+            QPushButton {
+                background-color: #f0f0f0;
+                border: none;
+                border-radius: 20px;
+                font-size: 16px;
+                color: #666;
+            }
+            QPushButton:hover {
+                background-color: #e0e0e0;
+            }
+        """)
+        
+        # Przycisk następnego miesiąca
+        self.next_button = QPushButton("→")
+        self.next_button.setFixedSize(40, 40)
+        self.next_button.clicked.connect(self.next_month)
+        self.next_button.setStyleSheet(self.prev_button.styleSheet())
+        
+        # Label z aktualnym miesiącem i rokiem
+        self.date_label = QLabel()
+        self.date_label.setFont(QFont("Segoe UI", 24, QFont.Bold))
+        self.date_label.setStyleSheet("color: #333333;")
+        
+        layout.addStretch(1)
+        layout.addWidget(self.prev_button)
+        layout.addWidget(self.date_label)
+        layout.addWidget(self.next_button)
+        layout.addStretch(1)
+        
+        self.update_label()
+        
+    def update_label(self):
+        months = {
+            1: 'Styczeń', 2: 'Luty', 3: 'Marzec', 4: 'Kwiecień',
+            5: 'Maj', 6: 'Czerwiec', 7: 'Lipiec', 8: 'Sierpień',
+            9: 'Wrzesień', 10: 'Październik', 11: 'Listopad', 12: 'Grudzień'
+        }
+        month_name = months[self.current_date.month]
+        self.date_label.setText(f"Plan na {month_name} {self.current_date.year}")
+        self.month_changed.emit(self.current_date)
+        
+    def previous_month(self):
+        if self.current_date.month == 1:
+            self.current_date = self.current_date.replace(year=self.current_date.year - 1, month=12)
+        else:
+            self.current_date = self.current_date.replace(month=self.current_date.month - 1)
+        self.update_label()
+        
+    def next_month(self):
+        if self.current_date.month == 12:
+            self.current_date = self.current_date.replace(year=self.current_date.year + 1, month=1)
+        else:
+            self.current_date = self.current_date.replace(month=self.current_date.month + 1)
+        self.update_label()
 class TaskDetailsDialog(QDialog):
     def __init__(self, task_data, parent=None):
         super().__init__(parent)
@@ -785,36 +876,34 @@ class MainWindow(QMainWindow):
         """)
         main_container_layout = QVBoxLayout(main_container)
         
-        # Lokalizacja miesięcy
-        months = {
-            'January': 'Styczeń', 'February': 'Luty', 'March': 'Marzec',
-            'April': 'Kwiecień', 'May': 'Maj', 'June': 'Czerwiec',
-            'July': 'Lipiec', 'August': 'Sierpień', 'September': 'Wrzesień',
-            'October': 'Październik', 'November': 'Listopad', 'December': 'Grudzień'
-        }
-        
-        current_month = datetime.now().strftime("%B %Y")
-        month_name = months[datetime.now().strftime("%B")]
-        header = QLabel(f"Plan na {month_name} {datetime.now().year}")
-        header.setFont(QFont("Segoe UI", 24, QFont.Bold))
-        header.setAlignment(Qt.AlignCenter)
-        header.setStyleSheet("""
-            QLabel {
-                color: #333333;
-                margin-bottom: 20px;
-            }
-        """)
-        main_container_layout.addWidget(header)
+        # Dodaj selektor miesiąca i roku
+        self.month_selector = MonthYearSelector()
+        self.month_selector.month_changed.connect(self.refresh_tasks)
+        main_container_layout.addWidget(self.month_selector)
         
         # Obszar przewijania dla bloków zadań
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll_area.setFrameShape(QFrame.NoFrame)
-        scroll_widget = QWidget()
-        scroll_widget.setStyleSheet("background: transparent;")
-        scroll_layout = QGridLayout(scroll_widget)
-        scroll_layout.setSpacing(15)
+        self.scroll_widget = QWidget()
+        self.scroll_widget.setStyleSheet("background: transparent;")
+        self.scroll_layout = QGridLayout(self.scroll_widget)
+        self.scroll_layout.setSpacing(15)
+        
+        self.refresh_tasks(datetime.now())
+        
+        scroll_area.setWidget(self.scroll_widget)
+        main_container_layout.addWidget(scroll_area)
+        
+        tasks_layout.addWidget(main_container)
+    
+    def refresh_tasks(self, selected_date):
+        # Usuń istniejące bloki zadań
+        while self.scroll_layout.count():
+            item = self.scroll_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
         
         # Pobierz kategorie z bazy danych
         with self.db_manager as db:
@@ -822,13 +911,9 @@ class MainWindow(QMainWindow):
             
         # Tworzenie bloków dla każdej kategorii
         for i, category in enumerate(categories):
-            block = TaskBlock(category['id'], category['name'], self.db_manager)
-            scroll_layout.addWidget(block, i // 2, i % 2)
-        
-        scroll_area.setWidget(scroll_widget)
-        main_container_layout.addWidget(scroll_area)
-        
-        tasks_layout.addWidget(main_container)
+            block = TaskBlock(category['id'], category['name'], 
+                            self.db_manager, selected_date)
+            self.scroll_layout.addWidget(block, i // 2, i % 2)
 
     def switch_view(self, view_name):
         """Przełącza widok aplikacji między zadaniami, kołem balansu i planowaniem długoterminowym."""

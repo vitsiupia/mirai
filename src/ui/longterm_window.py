@@ -131,6 +131,7 @@ class LongTermTaskDialog(QDialog):
             'period': self.period
         }
 
+
 class LongTermTaskBlock(QFrame):
     def __init__(self, category_id, category_name, period, db_manager, parent=None):
         super().__init__(parent)

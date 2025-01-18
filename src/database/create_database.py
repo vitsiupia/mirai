@@ -49,6 +49,7 @@ def create_database():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         completed_at TIMESTAMP,
+        target_month TEXT,
         FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE,
         FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE CASCADE
     )

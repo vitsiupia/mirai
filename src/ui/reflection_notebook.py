@@ -63,11 +63,12 @@ class ReflectionListItem(QWidget):
         
     def setup_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(40, 15, 10, 5)
+        layout.setContentsMargins(40, 8, 10, 0)  # Zmniejszony górny i dolny margines
         
         # Pojedynczy blok
         self.frame = QFrame()
         self.frame.setFixedWidth(525)
+        self.frame.setFixedHeight(100) 
         self.frame.setStyleSheet("""
             QFrame {
                 background-color: #f8f9fa;
@@ -80,17 +81,17 @@ class ReflectionListItem(QWidget):
         
         # Layout dla zawartości
         frame_layout = QVBoxLayout()
-        frame_layout.setContentsMargins(12, 12, 12, 12)
-        frame_layout.setSpacing(4)
+        frame_layout.setContentsMargins(10, 8, 10, 8)  # Zmniejszone marginesy wewnętrzne
+        frame_layout.setSpacing(2)  # Zmniejszony odstęp między elementami
         
         # Nazwa kategorii
         category_label = QLabel(self.category_name)
-        category_label.setFont(QFont("Segoe UI", 12, QFont.DemiBold))
+        category_label.setFont(QFont("Segoe UI", 11, QFont.DemiBold))  # Zmniejszona czcionka
         category_label.setStyleSheet("color: #2c3e50;")
         frame_layout.addWidget(category_label)
         
         # Tekst
-        preview = self.full_content[:100] + "..." if len(self.full_content) > 100 else self.full_content
+        preview = self.full_content[:200] + "..." if len(self.full_content) > 200 else self.full_content
         content_label = QLabel(preview)
         content_label.setWordWrap(True)
         content_label.setStyleSheet("""
@@ -98,8 +99,8 @@ class ReflectionListItem(QWidget):
             font-size: 11px;
             line-height: 1.4;
         """)
-        content_label.setMinimumHeight(40)
-        content_label.setMaximumHeight(60)
+        content_label.setMinimumHeight(20)  # Zmniejszona minimalna wysokość
+        content_label.setMaximumHeight(50)  # Zmniejszona maksymalna wysokość
         frame_layout.addWidget(content_label)
         
         self.frame.setLayout(frame_layout)
@@ -142,11 +143,13 @@ class ReflectionNotebook(QWidget):
     def setup_list_page(self):
         main_container = QWidget()
         main_layout = QVBoxLayout(main_container)
-        main_layout.setContentsMargins(0, 0, 0, 10)  # Dodane marginesy na dole
+        main_layout.setContentsMargins(0, 0, 0, 10)
         
         # Kontener na listę z przewijaniem
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
+        scroll_area.setMinimumHeight(400)  # Minimalna wysokość obszaru przewijania
+        scroll_area.setMaximumHeight(600)  # Maksymalna wysokość obszaru przewijania
         scroll_area.setStyleSheet("""
             QScrollArea {
                 border: none;
@@ -155,17 +158,25 @@ class ReflectionNotebook(QWidget):
             QScrollBar:vertical {
                 border: none;
                 background-color: #f1f1f1;
-                width: 8px;
+                width: 10px;
                 margin: 0;
             }
             QScrollBar::handle:vertical {
                 background-color: #c1c1c1;
-                border-radius: 4px;
+                border-radius: 5px;
                 min-height: 20px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background-color: #a1a1a1;
             }
             QScrollBar::add-line:vertical,
             QScrollBar::sub-line:vertical {
                 border: none;
+                background: none;
+                height: 0px;
+            }
+            QScrollBar::add-page:vertical,
+            QScrollBar::sub-page:vertical {
                 background: none;
             }
         """)
@@ -173,7 +184,9 @@ class ReflectionNotebook(QWidget):
         scroll_content = QWidget()
         self.reflections_layout = QVBoxLayout(scroll_content)
         self.reflections_layout.setContentsMargins(0, 0, 0, 0)
-        self.reflections_layout.setSpacing(0)
+        self.reflections_layout.setSpacing(-40)
+        
+        self.list_layout = self.reflections_layout
         
         scroll_area.setWidget(scroll_content)
         main_layout.addWidget(scroll_area)
@@ -189,7 +202,7 @@ class ReflectionNotebook(QWidget):
                 border-radius: 5px;
                 padding: 8px 16px;
                 font-weight: 500;
-                margin: 10px 40px;  /* Marginesy dopasowane do elementów listy */
+                margin: 10px 40px;
             }
             QPushButton:hover {
                 background-color: #357abd;
@@ -368,22 +381,38 @@ class ReflectionNotebook(QWidget):
                 self.category_combo.addItem(category['name'], category['id'])
                 
     def load_reflections(self):
-        # Wyczyść istniejące refleksje
-        while self.reflections_layout.count():
-            child = self.reflections_layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
-                
+        """Ładuje wszystkie refleksje do widoku listy."""
         with self.db_manager as db:
             reflections = db.get_all_reflections()
-            
-        for reflection in reflections:
-            item = ReflectionListItem(reflection['category_name'], reflection['content'])
-            item.clicked.connect(self.show_reflection_dialog)
-            self.reflections_layout.addWidget(item)
-            
-        self.reflections_layout.addStretch()
+
+        # Wyczyść istniejące widgety
+        while self.list_layout.count():
+            item = self.list_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        if not reflections:  # Dodana obsługa przypadku braku refleksji
+            no_reflections_label = QLabel("Brak zapisanych refleksji")
+            no_reflections_label.setStyleSheet("""
+                QLabel {
+                    color: #666;
+                    font-style: italic;
+                    padding: 20px;
+                }
+            """)
+            no_reflections_label.setAlignment(Qt.AlignCenter)
+            self.list_layout.addWidget(no_reflections_label)
+            return
         
+        # DODAJ TEN BRAKUJĄCY KOD:
+        for reflection in reflections:
+            reflection_item = ReflectionListItem(
+                reflection['category_name'], 
+                reflection['content']
+            )
+            reflection_item.clicked.connect(self.show_reflection_dialog)
+            self.list_layout.addWidget(reflection_item)
+            
     def show_reflection_dialog(self, category_name: str, content: str):
         dialog = ReflectionDialog(category_name, content, self)
         dialog.exec_()

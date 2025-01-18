@@ -14,6 +14,9 @@ class SmartGoalsDialog(QDialog):
         if goal_data:
             self.load_goal_data(goal_data)
         
+        # Połącz sygnał zmiany okresu z funkcją
+        self.time_combo.currentTextChanged.connect(self.on_period_changed)
+        
     def setup_ui(self):
         self.setWindowTitle("Cel SMART")
         self.setMinimumWidth(450)  # Zmniejszona szerokość
@@ -90,7 +93,31 @@ class SmartGoalsDialog(QDialog):
         # T - Time-bound
         time_label = QLabel("T - Okres realizacji:")
         self.time_combo = QComboBox()
-        self.time_combo.addItems(["5-10 lat", "1 rok", "6 miesięcy", "3 miesiące", "1 miesiąc"])
+        self.time_combo.addItems(["5-10 lat", "1 rok", "6 miesięcy", "3 miesiące", "miesiąc"])
+        
+        # Dodaj kontener na wybór miesiąca
+        self.month_container = QWidget()
+        month_layout = QHBoxLayout(self.month_container)
+        month_layout.setContentsMargins(0, 0, 0, 0)
+        
+        self.month_combo = QComboBox()
+        months = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", 
+                 "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"]
+        self.month_combo.addItems(months)
+        
+        # Ustaw bieżący miesiąc
+        current_month = datetime.now().month
+        self.month_combo.setCurrentIndex(current_month - 1)
+        
+        self.year_combo = QComboBox()
+        current_year = datetime.now().year
+        self.year_combo.addItems([str(year) for year in range(current_year, current_year + 5)])
+        
+        month_layout.addWidget(self.month_combo)
+        month_layout.addWidget(self.year_combo)
+        
+        # Początkowo ukryj kontener wyboru miesiąca
+        self.month_container.hide()
         
         # Subgoals button
         self.add_subgoal_button = QPushButton("+ Dodaj podcel")
@@ -150,6 +177,7 @@ class SmartGoalsDialog(QDialog):
         self.subgoals_container.hide()
 
         # Add all widgets to layout
+       # Add all widgets to layout
         layout.addWidget(title_label)
         layout.addWidget(self.title_edit)
         layout.addWidget(specific_label)
@@ -162,9 +190,17 @@ class SmartGoalsDialog(QDialog):
         layout.addWidget(self.relevant_edit)
         layout.addWidget(time_label)
         layout.addWidget(self.time_combo)
+        layout.addWidget(self.month_container)
         layout.addWidget(self.add_subgoal_button)
         layout.addWidget(self.subgoals_container)
-        layout.addLayout(buttons_layout)
+        layout.addLayout(buttons_layout)  # Przeniesione na koniec
+
+    def on_period_changed(self, text):
+        """Obsługuje zmianę wybranego okresu."""
+        if text == "miesiąc":
+            self.month_container.show()
+        else:
+            self.month_container.hide()
 
     def add_subgoal(self):
         """Adds a new subgoal input field."""
@@ -228,7 +264,7 @@ class SmartGoalsDialog(QDialog):
         return subgoals
 
     def get_smart_goal_data(self):
-        return {
+        data = {
             'title': self.title_edit.text().strip(),
             'category_id': self.category_id,
             'specific': self.specific_edit.toPlainText().strip(),
@@ -236,8 +272,16 @@ class SmartGoalsDialog(QDialog):
             'achievable': self.achievable_edit.toPlainText().strip(),
             'relevant': self.relevant_edit.toPlainText().strip(),
             'time_bound': self.time_combo.currentText(),
-            'subgoals': self.get_subgoals()
+            'subgoals': self.get_subgoals(),
+            'target_month': None
         }
+        
+        if self.time_combo.currentText() == "miesiąc":
+            month = self.month_combo.currentText()
+            year = self.year_combo.currentText()
+            data['target_month'] = f"{month} {year}"
+            
+        return data
 
     def load_goal_data(self, goal_data):
         """Loads existing goal data into the dialog."""
@@ -256,6 +300,17 @@ class SmartGoalsDialog(QDialog):
             self.subgoals_container.show()
             for subgoal in goal_data['subgoals']:
                 self.add_subgoal_with_data(subgoal)
+
+        if goal_data.get('target_month'):
+            self.time_combo.setCurrentText("miesiąc")
+            self.month_container.show()
+            month, year = goal_data['target_month'].split()
+            month_index = self.month_combo.findText(month)
+            year_index = self.year_combo.findText(year)
+            if month_index >= 0:
+                self.month_combo.setCurrentIndex(month_index)
+            if year_index >= 0:
+                self.year_combo.setCurrentIndex(year_index)
 
     def add_subgoal_with_data(self, subgoal_data):
         """Adds a new subgoal input field with existing data."""

@@ -173,29 +173,18 @@ class DatabaseManager:
         return categories
     
     def add_smart_goal(self, goal_data: dict) -> int:
-        """Adds a new SMART goal and its subgoals.
-        
-        Args:
-            goal_data: Dictionary containing:
-                - title: str
-                - category_id: int
-                - specific: str
-                - measurable: str
-                - achievable: str
-                - relevant: str
-                - time_bound: str
-                - subgoals: list[dict] (optional)
-        """
+        """Adds a new SMART goal and its subgoals."""
         try:
             # First, create the main task
             task_query = """
-            INSERT INTO tasks (title, category_id, period)
-            VALUES (?, ?, ?)
+            INSERT INTO tasks (title, category_id, period, target_month)
+            VALUES (?, ?, ?, ?)
             """
             self.cursor.execute(task_query, (
                 goal_data['title'],
                 goal_data['category_id'],
-                goal_data['time_bound']
+                goal_data['time_bound'],
+                goal_data.get('target_month')
             ))
             task_id = self.cursor.lastrowid
 
@@ -215,12 +204,12 @@ class DatabaseManager:
                 goal_data['time_bound']
             ))
 
-            # Finally, add any subgoals as child tasks
+            # Add any subgoals
             if goal_data.get('subgoals'):
                 subgoal_query = """
                 INSERT INTO tasks (
-                    title, category_id, parent_id, status, period
-                ) VALUES (?, ?, ?, ?, ?)
+                    title, category_id, parent_id, status, period, target_month
+                ) VALUES (?, ?, ?, ?, ?, ?)
                 """
                 for subgoal in goal_data['subgoals']:
                     status = 'completed' if subgoal.get('completed', False) else 'active'
@@ -229,7 +218,8 @@ class DatabaseManager:
                         goal_data['category_id'],
                         task_id,
                         status,
-                        goal_data['time_bound']
+                        goal_data['time_bound'],
+                        goal_data.get('target_month')
                     ))
 
             self.connection.commit()
@@ -252,7 +242,8 @@ class DatabaseManager:
             s.achievable,
             s.relevant,
             s.time_bound,
-            s.progress
+            s.progress,
+            t.target_month  -- Dodane na końcu listy
         FROM tasks t
         JOIN smart_goals s ON t.id = s.task_id
         WHERE t.category_id = ? 
@@ -286,6 +277,7 @@ class DatabaseManager:
                 'relevant': row[6],
                 'time_bound': row[7],
                 'progress': row[8],
+                'target_month': row[9],  # Dodane
                 'subgoals': subgoals
             })
         return goals
@@ -508,4 +500,56 @@ class DatabaseManager:
                 'created_at': row[4],
                 'updated_at': row[5]
             })
-        return reflections
+        return reflections  # Dodana instrukcja return
+
+    def get_tasks_by_category_and_date_range(self, category_id: int, start_date: str, end_date: str) -> List[Dict]:
+        """Pobiera zadania dla danej kategorii w określonym zakresie dat."""
+        # Mapowanie angielskich nazw miesięcy na polskie
+        month_mapping = {
+            1: 'Styczeń', 2: 'Luty', 3: 'Marzec', 4: 'Kwiecień',
+            5: 'Maj', 6: 'Czerwiec', 7: 'Lipiec', 8: 'Sierpień',
+            9: 'Wrzesień', 10: 'Październik', 11: 'Listopad', 12: 'Grudzień'
+        }
+        
+        # Wyciągnij miesiąc i rok z daty startowej
+        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
+        target_month = f"{month_mapping[start_date_obj.month]} {start_date_obj.year}"
+        
+        query = """
+        SELECT id, title, description, deadline, status, priority
+        FROM tasks
+        WHERE category_id = ? 
+        AND status != 'deleted'
+        AND (
+            (deadline BETWEEN ? AND ?)  -- Zwykłe zadania z deadline
+            OR  -- Cele SMART z target_month
+            (EXISTS (
+                SELECT 1 
+                FROM smart_goals sg 
+                WHERE sg.task_id = tasks.id
+            ) AND target_month = ?)
+        )
+        ORDER BY priority DESC, deadline
+        """
+        
+        self.cursor.execute(query, (category_id, start_date, end_date, target_month))
+        tasks = []
+        for row in self.cursor.fetchall():
+            is_smart_goal = False
+            # Sprawdź czy to cel SMART
+            self.cursor.execute("SELECT 1 FROM smart_goals WHERE task_id = ?", (row[0],))
+            if self.cursor.fetchone():
+                is_smart_goal = True
+                
+            tasks.append({
+                'id': row[0],
+                'title': row[1],
+                'description': row[2],
+                'deadline': row[3],
+                'status': row[4],
+                'priority': row[5],
+                'is_smart_goal': is_smart_goal
+            })
+        return tasks
+
+
