@@ -501,6 +501,13 @@ class DatabaseManager:
                 'updated_at': row[5]
             })
         return reflections  # Dodana instrukcja return
+    
+    def delete_reflection(self, category_id: int) -> bool:
+        """Usuwa refleksję dla danej kategorii."""
+        query = "DELETE FROM reflections WHERE category_id = ?"
+        self.cursor.execute(query, (category_id,))
+        self.connection.commit()
+        return self.cursor.rowcount > 0
 
     def get_tasks_by_category_and_date_range(self, category_id: int, start_date: str, end_date: str) -> List[Dict]:
         """Pobiera zadania dla danej kategorii w określonym zakresie dat."""

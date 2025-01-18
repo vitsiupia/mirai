@@ -691,8 +691,17 @@ class MainWindow(QMainWindow):
         self.db_manager = DatabaseManager()
         print("DatabaseManager utworzony")
         self.setup_ui()
-        self.current_view = 'tasks'  # tasks, balance, longterm
+        self.refresh_quote()  # Dodana metoda do odświeżania cytatu
+        self.current_view = 'tasks'
         print("Inicjalizacja zakończona")
+        
+    def refresh_quote(self):
+        """Odświeża cytat w interfejsie."""
+        with self.db_manager as db:
+            quote = db.get_random_quote()
+            if quote:
+                self.quote_text.setText(f'"{quote["text"]}"')
+                self.quote_author.setText(f"- {quote['author']}")
         
     def setup_ui(self):
         self.setWindowTitle("Mirai - Planer Celów")
@@ -749,35 +758,33 @@ class MainWindow(QMainWindow):
         # Górny pasek (tylko z cytatem)
         top_bar = QWidget()
         top_bar_layout = QHBoxLayout(top_bar)
-        top_bar_layout.setContentsMargins(10, 10, 10, 10)
+        top_bar_layout.setContentsMargins(5, 5, 5, 5)
         
         # Cytat (bez kontenera)
         quote_widget = QWidget()
         quote_layout = QVBoxLayout(quote_widget)
-        quote_layout.setContentsMargins(0, 0, 100, 0)
+        quote_layout.setContentsMargins(0, 10, 100, 0)
         quote_layout.setSpacing(5)
         
-        with self.db_manager as db:
-            quote = db.get_random_quote()
-            if quote:
-                self.quote_text = QLabel(f'"{quote["text"]}"')
-                self.quote_author = QLabel(f"- {quote['author']}")
-                
-                self.quote_text.setStyleSheet("""
-                    QLabel {
-                        color: #666;
-                        font-style: italic;
-                    }
-                """)
-                self.quote_author.setStyleSheet("""
-                    QLabel {
-                        color: #888;
-                    }
-                """)
-                self.quote_author.setAlignment(Qt.AlignRight)
-                
-                quote_layout.addWidget(self.quote_text)
-                quote_layout.addWidget(self.quote_author)
+        # Inicjalizuj puste etykiety dla cytatu
+        self.quote_text = QLabel()
+        self.quote_author = QLabel()
+        
+        self.quote_text.setStyleSheet("""
+            QLabel {
+                color: #666;
+                font-size: 16px;
+            }
+        """)
+        self.quote_author.setStyleSheet("""
+            QLabel {
+                color: #888;
+            }
+        """)
+        self.quote_author.setAlignment(Qt.AlignRight)
+        
+        quote_layout.addWidget(self.quote_text)
+        quote_layout.addWidget(self.quote_author)
         
         top_bar_layout.addStretch(1)
         top_bar_layout.addWidget(quote_widget)

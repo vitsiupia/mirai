@@ -31,7 +31,7 @@ class BalanceWheel(QWidget):
         left_panel.setStyleSheet("""
             QFrame {
                 background-color: white;
-                border-radius: 15px;
+                border-radius: 25px;
                 padding: 15px;
                 margin: 10px;
                 border: 1px solid #e0e0e0;
@@ -90,14 +90,13 @@ class BalanceWheel(QWidget):
         middle_layout.setSpacing(10)
         middle_layout.setContentsMargins(20, 20, 20, 20)
 
-        # Nagłówek w kontenerze
         header_container = QFrame()
         header_container.setStyleSheet("""
             QFrame {
-                background-color: transparent;
-                margin-bottom: 5px;
-                padding: 10px;
-                margin-bottom: 15px;
+                background-color: #f8f9fa;
+                margin-bottom: 20px;
+                padding: 5px;
+                border: none;
             }
         """)
         header_layout = QVBoxLayout(header_container)
@@ -137,18 +136,19 @@ class BalanceWheel(QWidget):
     def create_category_widget(self, category, score):
         # Główny kontener
         container = QWidget()
-        container.setFixedHeight(50)  # Ustaw stałą wysokość
+        container.setFixedHeight(50)
         container.setStyleSheet("""
             QWidget {
                 background-color: #f8f9fa;
                 border-radius: 8px;
+                border: none;
             }
         """)
         
         # Układ poziomy
         layout = QHBoxLayout(container)
-        layout.setContentsMargins(15, 5, 15, 5)
-        layout.setSpacing(15)
+        layout.setContentsMargins(15, 10, 15, 10)
+        layout.setSpacing(10)
         
         # Container dla nazwy kategorii - ustaw stałą szerokość
         name_container = QWidget()
