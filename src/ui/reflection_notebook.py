@@ -289,15 +289,17 @@ class ReflectionNotebook(QWidget):
         header_container = QFrame()
         header_container.setStyleSheet("""
             QFrame {
-                background-color: #f8f9fa;
+                background-color: white;
                 border-radius: 25px;
                 padding: 5px;
                 margin-bottom: 10px;
-                border: 1px solid #e0e0e0;
+                border: none;
                                        
             }
         """)
+        
         header_layout = QVBoxLayout(header_container)
+        header_layout.setContentsMargins(0, 0, 22, 0)
         header_layout.setSpacing(12)
         
         # Nagłówek

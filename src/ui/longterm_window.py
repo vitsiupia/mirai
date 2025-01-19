@@ -214,7 +214,7 @@ class LongTermTaskBlock(QFrame):
                 border: none;
                 border-radius: 4px;
                 padding: 8px;
-                color: #666;
+                color: #69a6f1;
                 font-size: 12px;
             }
             QPushButton:hover {
@@ -278,7 +278,7 @@ class LongTermTaskBlock(QFrame):
                 text-align: center;
             }
             QProgressBar::chunk {
-                background-color: #8bd88e;
+                background-color: #4CAF50;
                 border-radius: 4px;
             }
         """)
@@ -638,6 +638,7 @@ class GoalDetailsDialog(QDialog):
         header = QHBoxLayout()
         title = QLabel(self.goal_data['title'])
         title.setFont(QFont("Segoe UI", 12, QFont.Bold))
+        title.setStyleSheet("color: #69a6f1;")
         header.addWidget(title)
         
         edit_button = QPushButton("🖊️")
@@ -671,9 +672,10 @@ class GoalDetailsDialog(QDialog):
         
         # Pasek postępu
         progress_layout = QHBoxLayout()
-        progress_bar = QProgressBar()
-        progress_bar.setValue(self.goal_data['progress'])
-        progress_bar.setStyleSheet("""
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setValue(self.goal_data['progress'])
+        self.progress_bar.setFormat("%p%")  # Set format to show only one percentage
+        self.progress_bar.setStyleSheet("""
             QProgressBar {
                 border: 1px solid #ddd;
                 border-radius: 4px;
@@ -684,9 +686,7 @@ class GoalDetailsDialog(QDialog):
                 background-color: #4CAF50;
             }
         """)
-        progress_label = QLabel(f"{self.goal_data['progress']}%")
-        progress_layout.addWidget(progress_bar)
-        progress_layout.addWidget(progress_label)
+        progress_layout.addWidget(self.progress_bar)
         layout.addLayout(progress_layout)
 
         # Kryteria SMART w kompaktowej formie

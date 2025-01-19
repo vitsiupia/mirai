@@ -339,7 +339,7 @@ class TaskBlock(QFrame):
                     border: none;
                     border-radius: 5px;
                     padding: 8px;
-                    color: #666;
+                    color: #69a6f1;
                 }
                 QPushButton:hover {
                     background-color: #e0e0e0;
@@ -551,275 +551,262 @@ class MonthYearSelector(QWidget):
 class TaskDetailsDialog(QDialog):
     def __init__(self, task_data, parent=None):
         super().__init__(parent)
-        self.task_data = task_data
-        self.db_manager = parent.db_manager if parent else None
-        self.parent = parent
-        self.setup_ui()
-        
-    def setup_ui(self):
-        self.setWindowTitle("Szczegóły zadania")
-        self.setMinimumWidth(400)
-        self.setMaximumHeight(600)
         self.setStyleSheet("""
             QDialog {
-                background-color: #ffffff;
-                border-radius: 8px;
+                background-color: #f0f0f0;
             }
             QLabel {
                 color: #333333;
-                font-size: 12px;
             }
-            QLabel#titleLabel {
-                font-size: 14px;
-                font-weight: bold;
-                color: #4a90e2;
-            }
-            QLabel#headerLabel {
-                font-weight: bold;
-                color: #2c3e50;
-                font-size: 12px;
-                padding-top: 5px;
-            }
-            QTextEdit, QPlainTextEdit {
-                border: 1px solid #e0e0e0;
-                border-radius: 4px;
-                padding: 4px;
-                font-size: 12px;
-                max-height: 60px;
-                min-height: 40px;
-            }
-            QProgressBar {
-                border: 1px solid #e0e0e0;
-                border-radius: 4px;
-                text-align: center;
-                max-height: 15px;
-            }
-            QProgressBar::chunk {
-                background-color: #4a90e2;
-            }
-            QPushButton#editButton {
-                background-color: transparent;
-                border: none;
-                color: #4a90e2;
-                padding: 2px;
-            }
-            QPushButton#editButton:hover {
-                color: #357abd;
-            }
-            QCheckBox {
-                font-size: 12px;
-                padding-left: 20px;  /* Added padding for indentation */
+            QTextEdit {
+                color: #333333;
             }
         """)
+        self.task_data = task_data
+        self.db_manager = parent.db_manager if parent else None
+        self.parent = parent
+        self.progress_bar = None  # Add this line to store reference to progress bar
+        self.progress_label = None  # Add this line to store reference to progress label
+        self.setup_ui()
+
+        
+    def setup_ui(self):
+        self.setWindowTitle("Szczegóły Zadania")
+        self.setMinimumWidth(500)
         
         layout = QVBoxLayout(self)
-        layout.setSpacing(8)
+        layout.setSpacing(10)
         layout.setContentsMargins(15, 15, 15, 15)
         
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.NoFrame)
-        scroll_widget = QWidget()
-        self.scroll_layout = QVBoxLayout(scroll_widget)
-        self.scroll_layout.setSpacing(5)
+        # Tytuł i przyciski w jednej linii
+        header = QHBoxLayout()
+        title = QLabel(self.task_data['title'])
+        title.setFont(QFont("Segoe UI", 12, QFont.Bold))
+        title.setStyleSheet("color: #69a6f1;")
+        header.addWidget(title)
         
-        # Header section with title and basic info
-        header_widget = QWidget()
-        header_layout = QVBoxLayout(header_widget)
-        header_layout.setSpacing(2)
-        header_layout.setContentsMargins(0, 0, 0, 5)
-        
-        # Title container with edit button
-        title_container = QWidget()
-        title_layout = QHBoxLayout(title_container)
-        title_layout.setContentsMargins(0, 0, 0, 0)
-
-        title_label = QLabel(self.task_data['title'])
-        title_label.setObjectName("titleLabel")
-        title_layout.addWidget(title_label)
-
-        # Dodaj przycisk edycji dla wszystkich zadań (usuwamy warunek is_smart_goal)
-        edit_button = QPushButton("Edytuj 🖊️")
-        edit_button.setObjectName("editButton")
+        edit_button = QPushButton("🖊️")
+        edit_button.setFixedSize(30, 30)
+        edit_button.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                border: none;
+            }
+            QPushButton:hover { color: #4a90e2; }
+        """)
         edit_button.clicked.connect(self.edit_task)
-        title_layout.addWidget(edit_button)
-                
-        header_layout.addWidget(title_container)
-        
-        # Status and deadline info
-        info_widget = QWidget()
-        info_layout = QHBoxLayout(info_widget)
-        info_layout.setContentsMargins(0, 0, 0, 0)
-        info_layout.setSpacing(10)
-        
+        header.addWidget(edit_button)
+        layout.addLayout(header)
+
+        # Status i separator
+        info_layout = QHBoxLayout()
         status_text = "✅ Zakończone" if self.task_data['status'] == 'completed' else "⏳ W trakcie"
         status_label = QLabel(status_text)
-        status_label.setStyleSheet("color: " + ("#2ecc71" if self.task_data['status'] == 'completed' else "#666"))
+        status_label.setStyleSheet(f"color: {'#2ecc71' if self.task_data['status'] == 'completed' else '#666'};")
         info_layout.addWidget(status_label)
-        
+
         if self.task_data['deadline']:
             deadline = datetime.strptime(self.task_data['deadline'], '%Y-%m-%d').strftime('%d.%m.%Y')
             deadline_label = QLabel(f"📅 {deadline}")
+            deadline_label.setStyleSheet("color: #666;")
             info_layout.addWidget(deadline_label)
-        
+
         info_layout.addStretch()
-        header_layout.addWidget(info_widget)
-        self.scroll_layout.addWidget(header_widget)
-        
-        # Separator line
+        layout.addLayout(info_layout)
+
+        # Separator
         separator = QFrame()
         separator.setFrameShape(QFrame.HLine)
         separator.setFrameShadow(QFrame.Sunken)
-        separator.setStyleSheet("background-color: #e0e0e0;")
-        self.scroll_layout.addWidget(separator)
-        
-        # SMART goal specific content
+        separator.setStyleSheet("background-color: #e0e0e0; margin: 5px 0;")
+        layout.addWidget(separator)
+
+        # Dodaj ramkę SMART dla wszystkich zadań
+        smart_frame = QFrame()
+        smart_frame.setStyleSheet("""
+        QFrame { 
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            padding: 10px;
+        }
+    """)
+        smart_layout = QVBoxLayout(smart_frame)
+        smart_layout.setSpacing(8)
+
         if self.task_data.get('is_smart_goal') and self.db_manager:
+            smart_data = None
+            subgoals = []
+            
             with self.db_manager as db:
                 smart_data = db.get_smart_goal(self.task_data['id'])
                 if smart_data:
-                    # Progress bar
-                    if 'progress' in smart_data:
-                        progress_widget = QWidget()
-                        progress_layout = QHBoxLayout(progress_widget)
-                        progress_layout.setContentsMargins(0, 5, 0, 5)
-
-                        progress_bar = QProgressBar()
-                        progress_bar.setMaximum(100)
-                        progress_bar.setValue(smart_data['progress'])
-
-                        # Usunięcie tekstu z paska
-                        progress_bar.setStyleSheet("""
-                            QProgressBar {
-                                text-align: left;  /* Opcjonalnie zmienia pozycję tekstu */
-                                color: transparent;  /* Ukrywa tekst wewnątrz paska */
-                            }
-                            QProgressBar::chunk {
-                                background-color: #8bd88e;
-                            }
-                        """)
-
-                        progress_label = QLabel(f"{smart_data['progress']}%")
-                        progress_label.setStyleSheet("min-width: 45px;")  # Opcjonalne wyrównanie zewnętrzne
-
-                        progress_layout.addWidget(QLabel("Postęp:"))
-                        progress_layout.addWidget(progress_bar)
-                        progress_layout.addWidget(progress_label)
-
-                        self.scroll_layout.addWidget(progress_widget)
-                    
-                    # Subgoals section
                     subgoals = db.get_subgoals_by_goal(self.task_data['id'])
-                    if subgoals:
-                        subgoals_widget = QWidget()
-                        subgoals_layout = QVBoxLayout(subgoals_widget)
-                        subgoals_layout.setSpacing(2)
 
-                        # Dodaj etykietę "Podcele:" z odpowiednim stylem
-                        subgoals_label = QLabel("Podcele:")
-                        subgoals_label.setObjectName("headerLabel")
-                        subgoals_label.setStyleSheet("""
-                            QLabel#headerLabel {
-                                font-weight: bold;
-                                color: #2c3e50;
-                                font-size: 12px;
-                                padding-top: 5px;
-                                margin-bottom: 5px;  /* Dodane */
-                                text-align: left;    /* Dodane */
+            if smart_data:
+                # Pasek postępu
+                progress_layout = QHBoxLayout()
+                self.progress_bar = QProgressBar()  # Store reference to progress bar
+                self.progress_bar.setValue(smart_data['progress'])
+                self.progress_bar.setFormat("%p%")  # Set format to show only one percentage
+                self.progress_bar.setStyleSheet("""
+                    QProgressBar {
+                        border: 1px solid #ddd;
+                        border-radius: 4px;
+                        text-align: center;
+                        height: 15px;
+                    }
+                    QProgressBar::chunk {
+                        background-color: #4CAF50;
+                    }
+                """)
+                progress_layout.addWidget(self.progress_bar)
+                layout.addLayout(progress_layout)
+
+                # Kryteria SMART
+                criteria = [
+                    ("S", "Specific", "Konkretny", smart_data['specific']),
+                    ("M", "Measurable", "Mierzalny", smart_data['measurable']),
+                    ("A", "Achievable", "Osiągalny", smart_data['achievable']),
+                    ("R", "Relevant", "Istotny", smart_data['relevant']),
+                    ("T", "Time-bound", "Określony w czasie", smart_data['time_bound'])
+                ]
+
+                for letter, eng_name, pl_name, content in criteria:
+                    criterion_layout = QHBoxLayout()
+                    criterion_layout.setSpacing(10)
+
+                    labels_widget = QWidget()
+                    labels_widget.setFixedWidth(230)
+                    labels_layout = QHBoxLayout(labels_widget)
+                    labels_layout.setContentsMargins(0, 0, 0, 0)
+
+                    letter_label = QLabel(letter)
+                    letter_label.setFixedWidth(15)
+                    letter_label.setStyleSheet("font-weight: bold; color: #4a90e2;")
+
+                    name_label = QLabel(f"{eng_name} - {pl_name}")
+                    name_label.setStyleSheet("color: #666;")
+
+                    labels_layout.addWidget(letter_label)
+                    labels_layout.addWidget(name_label)
+                    labels_layout.addStretch()
+
+                    content_label = QLabel(content)
+                    content_label.setWordWrap(True)
+                    content_label.setMinimumWidth(200)
+                    content_label.setStyleSheet("""
+                        QLabel {
+                            background-color: white;
+                            border: 1px solid #ddd;
+                            border-radius: 4px;
+                            padding: 8px;
+                            min-height: 20px;
+                        }
+                    """)
+
+                    criterion_layout.addWidget(labels_widget)
+                    criterion_layout.addWidget(content_label, 1)
+                    smart_layout.addLayout(criterion_layout)
+
+                layout.addWidget(smart_frame)
+
+                # Podcele
+                if subgoals:
+                    subgoals_frame = QFrame()
+                    subgoals_frame.setStyleSheet("""
+                        QFrame {
+                            background-color: #f8f9fa;
+                            border-radius: 4px;
+                            padding: 10px;
+                        }
+                    """)
+                    subgoals_layout = QVBoxLayout(subgoals_frame)
+
+                    subgoals_label = QLabel("Podcele:")
+                    subgoals_label.setStyleSheet("font-weight: bold;")
+                    subgoals_layout.addWidget(subgoals_label)
+
+                    for subgoal in subgoals:
+                        checkbox = QCheckBox(subgoal['title'])
+                        checkbox.setChecked(subgoal['completed'])
+                        checkbox.setEnabled(True)
+                        checkbox.stateChanged.connect(
+                            lambda state, sg_id=subgoal['id']:
+                            self.update_subgoal_status(sg_id, state == Qt.Checked)
+                        )
+                        checkbox.setStyleSheet("""
+                            QCheckBox {
+                                padding: 2px;
                             }
                         """)
-                        subgoals_layout.addWidget(subgoals_label)
-                        subgoals_layout.addSpacing(5)  # Dodaje trochę przestrzeni po etykiecie
+                        subgoals_layout.addWidget(checkbox)
 
-                        # Kontener na checkboxy podcelów
-                        checkboxes_container = QWidget()
-                        checkboxes_layout = QVBoxLayout(checkboxes_container)
-                        checkboxes_layout.setContentsMargins(0, 0, 0, 0)
-                        checkboxes_layout.setSpacing(2)
+                    layout.addWidget(subgoals_frame)
+            else:
+                # Informacja o braku danych SMART
+                info_label = QLabel("Błąd: Nie znaleziono danych SMART dla tego celu")
+                info_label.setStyleSheet("""
+                    color: #666;
+                    padding: 20px;
+                    font-style: italic;
+                    text-align: center;
+                """)
+                info_label.setAlignment(Qt.AlignCenter)
+                smart_layout.addWidget(info_label)
+                layout.addWidget(smart_frame)
+        else:
+            # Informacja dla zwykłych zadań
+            info_label = QLabel("Cel nie został zdefiniowany za pomocą systemu SMART")
+            info_label.setStyleSheet("""
+                color: #666;
+                padding: 10px;
+                font-style: italic;
+                text-align: center;
+            """)
+            info_label.setAlignment(Qt.AlignCenter)
+            smart_layout.addWidget(info_label)
+            layout.addWidget(smart_frame)
 
-                        for subgoal in subgoals:
-                            subgoal_container = QWidget()
-                            subgoal_layout = QHBoxLayout(subgoal_container)
-                            subgoal_layout.setContentsMargins(0, 0, 0, 0)
-
-                            checkbox = QCheckBox(subgoal['title'])
-                            checkbox.setChecked(subgoal['completed'])
-                            checkbox.setStyleSheet("""
-                                QCheckBox {
-                                    padding: 5px;
-                                    border-radius: 4px;
-                                }
-                                QCheckBox:hover {
-                                    background-color: #f5f5f5;
-                                }
-                            """)
-                            checkbox.stateChanged.connect(
-                                lambda state, sg_id=subgoal['id']:
-                                self.update_subgoal_status(sg_id, state == Qt.Checked)
-                            )
-                            
-                            subgoal_layout.addWidget(checkbox)
-                            checkboxes_layout.addWidget(subgoal_container)
-
-                        # Dodaj kontener z checkboxami do głównego layoutu podcelów
-                        subgoals_layout.addWidget(checkboxes_container)
-                        
-                        # Dodaj całość do głównego layoutu
-                        self.scroll_layout.addWidget(subgoals_widget)
-                    
-                    # SMART criteria grid
-                    smart_grid = QWidget()
-                    grid_layout = QGridLayout(smart_grid)
-                    grid_layout.setSpacing(5)
-                    
-                    criteria = [
-                        ("S", "Specific", smart_data['specific']),
-                        ("M", "Measurable", smart_data['measurable']),
-                        ("A", "Achievable", smart_data['achievable']),
-                        ("R", "Relevant", smart_data['relevant']),
-                        ("T", "Time-bound", smart_data['time_bound'])
-                    ]
-                    
-                    for row, (letter, name, value) in enumerate(criteria):
-                        letter_label = QLabel(letter)
-                        letter_label.setStyleSheet("font-weight: bold; color: #4a90e2; min-width: 15px;")
-                        name_label = QLabel(name)
-                        name_label.setStyleSheet("color: #666;")
-                        
-                        text = QPlainTextEdit()
-                        text.setPlainText(value)
-                        text.setReadOnly(True)
-                        
-                        grid_layout.addWidget(letter_label, row, 0)
-                        grid_layout.addWidget(name_label, row, 1)
-                        grid_layout.addWidget(text, row, 2)
-                    
-                    self.scroll_layout.addWidget(smart_grid)
-        
-        # Description section
+        # Opis (dla wszystkich typów zadań)
         if self.task_data['description']:
+            description_frame = QFrame()
+            description_frame.setStyleSheet("""
+                QFrame {
+                    background-color: #f8f9fa;
+                    border-radius: 4px;
+                    padding: 10px;
+                }
+            """)
+            description_layout = QVBoxLayout(description_frame)
+
             description_label = QLabel("Opis:")
-            description_label.setObjectName("headerLabel")
-            self.scroll_layout.addWidget(description_label)
-            
+            description_label.setStyleSheet("font-weight: bold;")
+            description_layout.addWidget(description_label)
+
             description_text = QTextEdit()
             description_text.setPlainText(self.task_data['description'])
             description_text.setReadOnly(True)
-            self.scroll_layout.addWidget(description_text)
-        
-        scroll.setWidget(scroll_widget)
-        layout.addWidget(scroll)
-        
-        # Close button
+            description_text.setStyleSheet("""
+                QTextEdit {
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    padding: 8px;
+                    background-color: white;
+                }
+            """)
+            description_layout.addWidget(description_text)
+
+            layout.addWidget(description_frame)
+
+        # Przycisk zamknięcia
         close_button = QPushButton("Zamknij")
         close_button.setStyleSheet("""
             QPushButton {
                 background-color: #4a90e2;
+                color: white;
                 border: none;
                 border-radius: 4px;
-                color: white;
-                padding: 5px 15px;
-                font-weight: bold;
+                padding: 8px 16px;
                 min-width: 80px;
             }
             QPushButton:hover {
@@ -827,76 +814,65 @@ class TaskDetailsDialog(QDialog):
             }
         """)
         close_button.clicked.connect(self.accept)
-        layout.addWidget(close_button, alignment=Qt.AlignCenter)
+        layout.addWidget(close_button, alignment=Qt.AlignRight)
 
     def update_subgoal_status(self, subgoal_id: int, completed: bool):
         """Updates the subgoal status and recalculates the main goal's progress."""
-        with self.db_manager as db:
-            db.update_subgoal_status(subgoal_id, completed)
-            # Update main goal progress
-            goal_id = db.get_goal_id_by_subgoal(subgoal_id)
-            if goal_id:
-                subgoals = db.get_subgoals_by_goal(goal_id)
-                total = len(subgoals)
-                completed_count = len([sg for sg in subgoals if sg['completed']])
-                progress = int((completed_count / total) * 100) if total > 0 else 0
-                db.update_goal_progress(goal_id, progress)
-                
-                # Refresh UI
-                for widget in self.findChildren(QProgressBar):
-                    widget.setValue(progress)
-                for widget in self.findChildren(QLabel):
-                    if widget.text().endswith('%'):
-                        widget.setText(f"{progress}%")
-                
-        # Refresh parent view
-        if self.parent and hasattr(self.parent, 'load_tasks'):
-            self.parent.load_tasks()
+        if self.db_manager:
+            with self.db_manager as db:
+                db.update_subgoal_status(subgoal_id, completed)
+                goal_id = db.get_goal_id_by_subgoal(subgoal_id)
+                if goal_id:
+                    subgoals = db.get_subgoals_by_goal(goal_id)
+                    total = len(subgoals)
+                    completed_count = len([sg for sg in subgoals if sg['completed']])
+                    progress = int((completed_count / total) * 100) if total > 0 else 0
+                    db.update_goal_progress(goal_id, progress)
+                    
+                    # Update progress bar and label immediately
+                    if self.progress_bar and self.progress_label:
+                        self.progress_bar.setValue(progress)
+                        self.progress_label.setText(f"{progress}%")
+
+            # Refresh parent view
+            if self.parent and hasattr(self.parent, 'load_tasks'):
+                self.parent.load_tasks()
 
     def edit_task(self):
-        """Opens the task edit dialog."""
+        """Opens the appropriate edit dialog based on task type."""
         if self.task_data.get('is_smart_goal'):
-            # Istniejąca logika dla celów SMART
-            ...
+            # Pobierz dane celu SMART
+            with self.db_manager as db:
+                smart_goal_data = db.get_smart_goal_details(self.task_data['id'])
+            dialog = SmartGoalsDialog(self.task_data['category_id'], self, smart_goal_data)
         else:
-            # Logika dla zwykłych zadań
-            dialog = TaskDialog(self.task_data.get('category_id'), self)
-            # Wypełnij dane istniejącego zadania
+            dialog = TaskDialog(self.task_data['category_id'], self)
             dialog.title_edit.setText(self.task_data['title'])
             if self.task_data.get('description'):
                 dialog.description_edit.setPlainText(self.task_data['description'])
             if self.task_data.get('deadline'):
                 date = datetime.strptime(self.task_data['deadline'], '%Y-%m-%d')
                 dialog.calendar.setSelectedDate(date)
-            
-            if dialog.exec_() == QDialog.Accepted:
+
+        if dialog.exec_() == QDialog.Accepted:
+            if self.task_data.get('is_smart_goal'):
+                updated_data = dialog.get_smart_goal_data()
+                with self.db_manager as db:
+                    db.update_smart_goal(self.task_data['id'], updated_data)
+            else:
                 updated_data = dialog.get_task_data()
-                if self.db_manager:
-                    with self.db_manager as db:
-                        success = db.update_task(
-                            task_id=self.task_data['id'],
-                            title=updated_data['title'],
-                            description=updated_data['description'],
-                            deadline=updated_data['deadline']
-                        )
-                        if success:
-                            # Aktualizuj dane w pamięci
-                            self.task_data.update({
-                                'title': updated_data['title'],
-                                'description': updated_data['description'],
-                                'deadline': updated_data['deadline']
-                            })
-                            
-                            # Odśwież widok rodzica
-                            if self.parent and hasattr(self.parent, 'load_tasks'):
-                                self.parent.load_tasks()
-                                
-                            # Zamknij okno szczegółów
-                            self.accept()
-                            
-                            # Pokaż zaktualizowane szczegóły
-                            if self.parent:
-                                self.parent.show_task_details(self.task_data)
+                with self.db_manager as db:
+                    db.update_task(
+                        self.task_data['id'],
+                        updated_data['title'],
+                        updated_data['description'],
+                        updated_data['deadline']
+                    )
+
+            # Refresh views
+            if self.parent and hasattr(self.parent, 'load_tasks'):
+                self.parent.load_tasks()
+            self.accept()
 
 def modify_task_widget(self, task_data):
     task_widget = QWidget()
