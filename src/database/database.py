@@ -558,5 +558,56 @@ class DatabaseManager:
                 'is_smart_goal': is_smart_goal
             })
         return tasks
-
-
+    
+    def add_subgoal(self, goal_id: int, title: str, completed: bool = False) -> int:
+        """Dodaje nowy podcel do istniejącego celu SMART.
+        
+        Args:
+            goal_id (int): ID głównego celu SMART
+            title (str): Nazwa podcelu
+            completed (bool): Czy podcel jest już wykonany
+            
+        Returns:
+            int: ID nowego podcelu
+        """
+        status = 'completed' if completed else 'active'
+        
+        # Pobierz informacje o głównym celu
+        query = """
+        SELECT category_id, period
+        FROM tasks
+        WHERE id = ?
+        """
+        self.cursor.execute(query, (goal_id,))
+        parent_info = self.cursor.fetchone()
+        
+        if not parent_info:
+            raise ValueError("Nie znaleziono głównego celu")
+            
+        category_id, period = parent_info
+        
+        # Dodaj nowy podcel
+        query = """
+        INSERT INTO tasks (
+            title, category_id, parent_id, status, period
+        ) VALUES (?, ?, ?, ?, ?)
+        """
+        self.cursor.execute(query, (
+            title,
+            category_id,
+            goal_id,
+            status,
+            period
+        ))
+        
+        subgoal_id = self.cursor.lastrowid
+        self.connection.commit()
+        
+        # Zaktualizuj postęp głównego celu
+        subgoals = self.get_subgoals_by_goal(goal_id)
+        total = len(subgoals)
+        completed_count = len([sg for sg in subgoals if sg['completed']])
+        progress = int((completed_count / total) * 100) if total > 0 else 0
+        self.update_goal_progress(goal_id, progress)
+        
+        return subgoal_id

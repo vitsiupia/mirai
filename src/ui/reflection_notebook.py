@@ -262,7 +262,7 @@ class ReflectionNotebook(QWidget):
                 background-color: #4a90e2;
                 color: white;
                 border: none;
-                border-radius: 5px;
+                border-radius: 5px; 
                 padding: 8px 16px;
                 font-weight: 500;
                 margin: 1px 40px;
@@ -290,9 +290,11 @@ class ReflectionNotebook(QWidget):
         header_container.setStyleSheet("""
             QFrame {
                 background-color: #f8f9fa;
-                border-radius: 8px;
+                border-radius: 25px;
                 padding: 5px;
                 margin-bottom: 10px;
+                border: 1px solid #e0e0e0;
+                                       
             }
         """)
         header_layout = QVBoxLayout(header_container)
@@ -302,14 +304,14 @@ class ReflectionNotebook(QWidget):
         header = QLabel("Pomyśl o tym co musisz osiągać, żeby ocenić wybraną kategorię na 10")
         header.setFont(QFont("Segoe UI", 13, QFont.Bold))
         header.setWordWrap(True)
-        header.setStyleSheet("color: #2c3e50;")
+        header.setStyleSheet("color: #2c3e50; border: none;")
         header_layout.addWidget(header)
         
         # Opis
         description = QLabel("Wyobraź sobie idealny scenariusz. Przeanalizuj co z tego da się realizować, "
                            "a co jest nieosiągalne. Następnie napisz plan z pomocą celów SMART")
         description.setWordWrap(True)
-        description.setStyleSheet("color: #666; font-size: 12px; line-height: 1.4;")
+        description.setStyleSheet("color: #666; font-size: 14px; line-height: 1.4;")
         header_layout.addWidget(description)
         
         layout.addWidget(header_container)

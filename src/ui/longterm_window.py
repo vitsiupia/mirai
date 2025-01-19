@@ -232,8 +232,14 @@ class LongTermTaskBlock(QFrame):
             min_height = max(300, content_height + 150)  # 150 to przestrzeń na nagłówek i przycisk
             self.setMinimumHeight(min_height)
 
+    def show_goal_details(self, goal_data):
+        dialog = GoalDetailsDialog(goal_data, self)
+        dialog.exec_()
+
     def add_goal_widget(self, goal_data):
         goal_widget = QFrame()
+        goal_widget.setCursor(Qt.PointingHandCursor)  # Zmiana kursora na wskazujący
+        goal_widget.mousePressEvent = lambda e: self.show_goal_details(goal_data)
         goal_widget.setStyleSheet("""
             QFrame {
                 border: 1px solid #f0f0f0;
@@ -611,6 +617,178 @@ class LongTermWindow(QMainWindow):
                 block.setFixedSize(520, 380)
             
             self.scroll_layout.addWidget(block, i // 2, i % 2)
+
+class GoalDetailsDialog(QDialog):
+    def __init__(self, goal_data, parent=None):
+        super().__init__(parent)
+        self.goal_data = goal_data
+        self.db_manager = parent.db_manager if parent else None
+        self.parent = parent
+        self.setup_ui()
+        
+    def setup_ui(self):
+        self.setWindowTitle("Szczegóły Celu")
+        self.setMinimumWidth(500)
+        
+        layout = QVBoxLayout(self)
+        layout.setSpacing(10)
+        layout.setContentsMargins(15, 15, 15, 15)
+        
+        # Tytuł i przyciski w jednej linii
+        header = QHBoxLayout()
+        title = QLabel(self.goal_data['title'])
+        title.setFont(QFont("Segoe UI", 12, QFont.Bold))
+        header.addWidget(title)
+        
+        edit_button = QPushButton("🖊️")
+        edit_button.setFixedSize(30, 30)
+        edit_button.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                border: none;
+            }
+            QPushButton:hover { color: #4a90e2; }
+        """)
+        edit_button.clicked.connect(lambda: self.parent.edit_smart_goal(self.goal_data['id']))
+        header.addWidget(edit_button)
+        layout.addLayout(header)
+
+        # Status i separator
+        info_layout = QHBoxLayout()
+        status_text = "✅ Zakończone" if self.goal_data['status'] == 'completed' else "⏳ W trakcie"
+        status_label = QLabel(status_text)
+        status_label.setStyleSheet(f"color: {'#2ecc71' if self.goal_data['status'] == 'completed' else '#666'};")
+        info_layout.addWidget(status_label)
+        info_layout.addStretch()
+        layout.addLayout(info_layout)
+
+        # Separator
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setFrameShadow(QFrame.Sunken)
+        separator.setStyleSheet("background-color: #e0e0e0; margin: 5px 0;")
+        layout.addWidget(separator)
+        
+        # Pasek postępu
+        progress_layout = QHBoxLayout()
+        progress_bar = QProgressBar()
+        progress_bar.setValue(self.goal_data['progress'])
+        progress_bar.setStyleSheet("""
+            QProgressBar {
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                text-align: center;
+                height: 15px;
+            }
+            QProgressBar::chunk {
+                background-color: #4CAF50;
+            }
+        """)
+        progress_label = QLabel(f"{self.goal_data['progress']}%")
+        progress_layout.addWidget(progress_bar)
+        progress_layout.addWidget(progress_label)
+        layout.addLayout(progress_layout)
+
+        # Kryteria SMART w kompaktowej formie
+        smart_frame = QFrame()
+        smart_frame.setStyleSheet("""
+            QFrame { 
+                background-color: #f8f9fa; 
+                border-radius: 4px; 
+                padding: 10px; 
+            }
+        """)
+        smart_layout = QVBoxLayout(smart_frame)
+        smart_layout.setSpacing(8)  # Zwiększony odstęp między wierszami
+        
+        criteria = [
+            ("S", "Specific", "Konkretny", self.goal_data['specific']),
+            ("M", "Measurable", "Mierzalny", self.goal_data['measurable']),
+            ("A", "Achievable", "Osiągalny", self.goal_data['achievable']),
+            ("R", "Relevant", "Istotny", self.goal_data['relevant']),
+            ("T", "Time-bound", "Określony w czasie", self.goal_data['time_bound'])
+        ]
+        
+        for letter, eng_name, pl_name, content in criteria:
+            criterion_layout = QHBoxLayout()
+            criterion_layout.setSpacing(10)  # Stały odstęp między elementami
+            
+            # Container dla etykiet (litera + nazwy)
+            labels_widget = QWidget()
+            labels_widget.setFixedWidth(230)  # Stała szerokość dla wszystkich etykiet
+            labels_layout = QHBoxLayout(labels_widget)
+            labels_layout.setContentsMargins(0, 0, 0, 0)
+            
+            letter_label = QLabel(letter)
+            letter_label.setFixedWidth(15)
+            letter_label.setStyleSheet("""
+                font-weight: bold; 
+                color: #4a90e2;
+            """)
+            
+            name_label = QLabel(f"{eng_name} - {pl_name}")
+            name_label.setStyleSheet("color: #666;")
+            
+            labels_layout.addWidget(letter_label)
+            labels_layout.addWidget(name_label)
+            labels_layout.addStretch()
+            
+            # Content label
+            content_label = QLabel(content)
+            content_label.setWordWrap(True)
+            content_label.setMinimumWidth(200)  # Minimalna szerokość dla treści
+            content_label.setStyleSheet("""
+                QLabel {
+                    background-color: white;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    padding: 8px;
+                    min-height: 20px;
+                }
+            """)
+            
+            criterion_layout.addWidget(labels_widget)
+            criterion_layout.addWidget(content_label, 1)  # Stretch factor 1 dla content
+            smart_layout.addLayout(criterion_layout)
+            
+        layout.addWidget(smart_frame)
+        
+        # Podcele w formie listy checkboxów
+        if self.goal_data.get('subgoals'):
+            subgoals_frame = QFrame()
+            subgoals_frame.setStyleSheet("QFrame { background-color: #f8f9fa; border-radius: 4px; padding: 10px; }")
+            subgoals_layout = QVBoxLayout(subgoals_frame)
+            
+            subgoals_label = QLabel("Podcele:")
+            subgoals_label.setStyleSheet("font-weight: bold;")
+            subgoals_layout.addWidget(subgoals_label)
+            
+            for subgoal in self.goal_data['subgoals']:
+                checkbox = QCheckBox(subgoal['title'])
+                checkbox.setChecked(subgoal['completed'])
+                checkbox.setEnabled(False)
+                checkbox.setStyleSheet("padding: 2px;")
+                subgoals_layout.addWidget(checkbox)
+            
+            layout.addWidget(subgoals_frame)
+        
+        # Przycisk zamknięcia
+        close_button = QPushButton("Zamknij")
+        close_button.setStyleSheet("""
+            QPushButton {
+                background-color: #4a90e2;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 8px 16px;
+                min-width: 80px;
+            }
+            QPushButton:hover {
+                background-color: #357abd;
+            }
+        """)
+        close_button.clicked.connect(self.accept)
+        layout.addWidget(close_button, alignment=Qt.AlignRight)
 
 def main():
     app = QApplication(sys.argv)

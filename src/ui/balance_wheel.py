@@ -1,7 +1,7 @@
 import os
 import sys
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
-                           QLabel, QFrame, QSlider, QSpinBox)
+                           QLabel, QFrame, QSlider, QSpinBox, QScrollArea,QGridLayout)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 import matplotlib.pyplot as plt
@@ -92,30 +92,40 @@ class BalanceWheel(QWidget):
         middle_panel.setMaximumWidth(500)  # Zmniejszona maksymalna szerokość
         middle_layout = QVBoxLayout(middle_panel)
         middle_layout.setSpacing(10)
-        middle_layout.setContentsMargins(20, 20, 20, 20)
+        middle_layout.setContentsMargins(-35, -20, 20, 20)
 
         header_container = QFrame()
         header_container.setStyleSheet("""
             QFrame {
                 background-color: #f8f9fa;
+                margin-left: 0px; 
                 margin-bottom: 20px;
                 padding: 5px;
-                border: none;
+                border: 1px solid #e0e0e0;
             }
         """)
+
+        header_container.setMinimumWidth(350)  # Zwiększenie minimalnej szerokości
+        header_container.setMaximumWidth(550)
+
+        # Inicjalizacja układu
         header_layout = QVBoxLayout(header_container)
-        header_layout.setSpacing(8)
-        
+        header_layout.setContentsMargins(0, -50, -60, 0)  # Teraz poprawnie ustawione
+        header_layout.setSpacing(4)
+
         title = QLabel("POZIOM ZADOWOLENIA Z ŻYCIA")
-        title.setFont(QFont("Segoe UI", 12, QFont.Bold))
+        title.setFont(QFont("Segoe UI", 13, QFont.Bold))
         title.setWordWrap(True)
+        title.setStyleSheet("color: #333; border: none;")
         header_layout.addWidget(title)
         
         description = QLabel("Na ile oceniasz swoje zadowolenie z życia w poszczególnych kategoriach od 1 do 10?")
         description.setFont(QFont("Segoe UI", 10))
         description.setWordWrap(True)
-        description.setStyleSheet("color: #666;")
+        description.setStyleSheet("color: #666; border: none;")
         header_layout.addWidget(description)
+
+        
         
         middle_layout.addWidget(header_container)
         
@@ -145,7 +155,7 @@ class BalanceWheel(QWidget):
             QWidget {
                 background-color: #f8f9fa;
                 border-radius: 8px;
-                border: none;
+                border: 1px solid #e0e0e0;
             }
         """)
         
@@ -157,6 +167,7 @@ class BalanceWheel(QWidget):
         # Container dla nazwy kategorii - ustaw stałą szerokość
         name_container = QWidget()
         name_container.setFixedWidth(250)  # Stała szerokość dla wszystkich nazw
+        name_container.setStyleSheet("border: none;")
         name_layout = QHBoxLayout(name_container)
         name_layout.setContentsMargins(0, 0, 0, 0)
         
@@ -167,6 +178,7 @@ class BalanceWheel(QWidget):
             QLabel {
                 color: #333333;
                 background-color: transparent;
+                border: none;
             }
         """)
         name_layout.addWidget(name_label)
@@ -185,7 +197,7 @@ class BalanceWheel(QWidget):
                 padding: 5px;
                 min-width: 60px;
                 max-width: 60px;
-                min-height: 30px;
+                min-height: 20px;
             }
             QSpinBox:hover {
                 border: 1px solid #4a90e2;
@@ -211,46 +223,171 @@ class BalanceWheel(QWidget):
         return container
         
     def show_scale_description(self):
-        # Tworzenie okna dialogowego z opisem skali ocen
         dialog = QDialog(self)
         dialog.setWindowTitle("Skala Ocen")
-        dialog.setMinimumWidth(400)
+        dialog.setMinimumWidth(600)  # Minimalna szerokość
+        dialog.setMinimumHeight(400)  # Minimalna wysokość
         
-        layout = QVBoxLayout(dialog)
+        # Ustawienie domyślnego rozmiaru (można zmieniać)
+        dialog.resize(800, 600)
         
-        text_edit = QTextEdit(dialog)
-        text_edit.setReadOnly(True)
-        text_edit.setText("""
-1 - Skrajne niezadowolenie: Absolutnie nie jesteś zadowolony z tego obszaru swojego życia. Czujesz, że nie działa on w ogóle, brak postępów i pozytywnych emocji. Możliwe jest uczucie frustracji, przygnębienia lub bezsilności.
-
-2 - Bardzo duże niezadowolenie: Jest minimalna poprawa w stosunku do najniższego poziomu, ale nadal masz poważne trudności. Obszar ten wymaga natychmiastowej uwagi, a satysfakcja jest praktycznie zerowa.
-
-3 - Duże niezadowolenie: Nadal odczuwasz duży brak satysfakcji, choć mogą pojawić się pewne drobne elementy, które działają. Wciąż jest jednak wiele do poprawienia.
-
-4 - Zauważalne niezadowolenie: Czujesz się niezadowolony, ale widzisz pewne małe, choć nieregularne oznaki poprawy. Niektóre elementy działają, ale ogólny obraz nadal jest niezadowalający.
-
-5 - Neutralność/średnie zadowolenie: Osiągnąłeś poziom przeciętny. Nie jesteś ani bardzo zadowolony, ani niezadowolony. Nie ma poważnych problemów, ale także brakuje istotnych sukcesów lub pozytywnych emocji.
-
-6 - Umiarkowane zadowolenie: Zaczynasz odczuwać satysfakcję, choć nadal widzisz sporo miejsca na poprawę. Funkcjonujesz dobrze, ale jesteś świadomy, że mogłoby być znacznie lepiej.
-
-7 - Dobre zadowolenie: Jest sporo pozytywnych emocji i satysfakcji w tym obszarze, choć nadal istnieją aspekty, które chciałbyś poprawić. Ogólny stan jest raczej pozytywny.
-
-8 - Bardzo dobre zadowolenie: Czujesz dużą satysfakcję i radość z tego, jak funkcjonuje ten obszar twojego życia. Możliwe, że jest niewielkie miejsce na poprawę, ale ogólnie jesteś zadowolony.
-
-9 - Prawie pełne zadowolenie: Ten obszar życia działa bardzo dobrze, a poziom satysfakcji jest bliski maksymalnego. Czujesz się spełniony, ale widzisz jeszcze niewielki potencjał na drobne ulepszenia.
-
-10 - Pełne zadowolenie: Absolutna satysfakcja. Wszystko działa tak, jak sobie wymarzyłeś. Nie czujesz potrzeby wprowadzania jakichkolwiek zmian w tym obszarze, ponieważ jesteś w pełni spełniony i zadowolony.
+        dialog.setStyleSheet("""
+            QDialog {
+                background-color: white;
+            }
+            QScrollArea {
+                border: none;
+            }
+            QPushButton {
+                background-color: #4a90e2;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 8px 16px;
+                font-size: 12px;
+                font-weight: bold;
+                min-width: 100px;
+            }
+            QPushButton:hover {
+                background-color: #357abd;
+            }
         """)
         
-        layout.addWidget(text_edit)
+        # Główny layout
+        main_layout = QVBoxLayout(dialog)
+        main_layout.setSpacing(12)
+        main_layout.setContentsMargins(15, 15, 15, 15)
         
-        # Przycisk zamykający okno
-        close_button = QPushButton("Zamknij", dialog)
+        # Scroll area
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet("background-color: white;")
+        
+        # Główny kontener
+        container = QWidget()
+        container_layout = QVBoxLayout(container)
+        container_layout.setSpacing(10)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Grid do układu dwukolumnowego
+        grid_layout = QGridLayout()
+        grid_layout.setSpacing(8)
+        
+        scale_descriptions = [
+            (10, "Pełne zadowolenie", 
+            "Absolutna satysfakcja. Wszystko działa tak, jak sobie wymarzyłeś. Nie czujesz potrzeby wprowadzania jakichkolwiek zmian w tym obszarze, ponieważ jesteś w pełni spełniony i zadowolony."),
+            (9, "Prawie pełne zadowolenie", 
+            "Ten obszar życia działa bardzo dobrze, a poziom satysfakcji jest bliski maksymalnego. Czujesz się spełniony, ale widzisz jeszcze niewielki potencjał na drobne ulepszenia."),
+            (8, "Bardzo dobre zadowolenie", 
+            "Czujesz dużą satysfakcję i radość z tego, jak funkcjonuje ten obszar twojego życia. Możliwe, że jest niewielkie miejsce na poprawę, ale ogólnie jesteś zadowolony."),
+            (7, "Dobre zadowolenie", 
+            "Jest sporo pozytywnych emocji i satysfakcji w tym obszarze, choć nadal istnieją aspekty, które chciałbyś poprawić. Ogólny stan jest raczej pozytywny."),
+            (6, "Umiarkowane zadowolenie", 
+            "Zaczynasz odczuwać satysfakcję, choć nadal widzisz sporo miejsca na poprawę. Funkcjonujesz dobrze, ale jesteś świadomy, że mogłoby być znacznie lepiej."),
+            (5, "Neutralność/średnie zadowolenie", 
+            "Osiągnąłeś poziom przeciętny. Nie jesteś ani bardzo zadowolony, ani niezadowolony. Nie ma poważnych problemów, ale także brakuje istotnych sukcesów lub pozytywnych emocji."),
+            (4, "Zauważalne niezadowolenie", 
+            "Czujesz się niezadowolony, ale widzisz pewne małe, choć nieregularne oznaki poprawy. Niektóre elementy działają, ale ogólny obraz nadal jest niezadowalający."),
+            (3, "Duże niezadowolenie", 
+            "Nadal odczuwasz duży brak satysfakcji, choć mogą pojawić się pewne drobne elementy, które działają. Wciąż jest jednak wiele do poprawienia."),
+            (2, "Bardzo duże niezadowolenie", 
+            "Jest minimalna poprawa w stosunku do najniższego poziomu, ale nadal masz poważne trudności. Obszar ten wymaga natychmiastowej uwagi, a satysfakcja jest praktycznie zerowa."),
+            (1, "Skrajne niezadowolenie", 
+            "Absolutnie nie jesteś zadowolony z tego obszaru swojego życia. Czujesz, że nie działa on w ogóle, brak postępów i pozytywnych emocji. Możliwe jest uczucie frustracji, przygnębienia lub bezsilności.")
+        ]
+        
+        # Wypełnienie siatki
+        for i, (score, title, description) in enumerate(scale_descriptions):
+            score_widget = QFrame()
+            score_widget.setStyleSheet(f"""
+                QFrame {{
+                    background-color: {self._get_score_color(score)};
+                    border-radius: 6px;
+                    padding: 8px;
+                }}
+            """)
+            
+            score_layout = QHBoxLayout(score_widget)
+            score_layout.setSpacing(8)
+            score_layout.setContentsMargins(10, 8, 10, 8)
+            
+            # Numer
+            number_label = QLabel(f"{score}")
+            number_label.setStyleSheet("""
+                QLabel {
+                    font-size: 14px;
+                    font-weight: bold;
+                    color: #333;
+                    min-width: 20px;
+                }
+            """)
+            score_layout.addWidget(number_label)
+            
+            # Kontener na tytuł i opis
+            text_container = QVBoxLayout()
+            text_container.setSpacing(2)
+            
+            # Tytuł
+            title_label = QLabel(title)
+            title_label.setStyleSheet("""
+                QLabel {
+                    font-size: 13px;
+                    font-weight: bold;
+                    color: #333;
+                }
+            """)
+            text_container.addWidget(title_label)
+            
+            # Opis
+            desc_label = QLabel(description)
+            desc_label.setWordWrap(True)
+            desc_label.setStyleSheet("""
+                QLabel {
+                    color: #444;
+                    font-size: 12px;
+                    line-height: 1.3;
+                }
+            """)
+            text_container.addWidget(desc_label)
+            
+            score_layout.addLayout(text_container)
+            score_layout.setStretch(1, 1)  # Rozciągnij tekst
+            
+            # Dodaj do siatki (5 elementów w każdej kolumnie)
+            row = i % 5
+            col = i // 5
+            grid_layout.addWidget(score_widget, row, col)
+        
+        container_layout.addLayout(grid_layout)
+        scroll.setWidget(container)
+        main_layout.addWidget(scroll)
+        
+        # Panel z przyciskiem na dole
+        button_panel = QWidget()
+        button_layout = QHBoxLayout(button_panel)
+        button_layout.setContentsMargins(0, 0, 0, 0)
+        button_layout.addStretch()  # Elastyczna przestrzeń przed przyciskiem
+        
+        # Przycisk zamykający
+        close_button = QPushButton("Zamknij")
+        close_button.setCursor(Qt.PointingHandCursor)
+        button_layout.addWidget(close_button)
+        main_layout.addWidget(button_panel)
+        
         close_button.clicked.connect(dialog.accept)
-        layout.addWidget(close_button)
-        
         dialog.exec_()
-    
+
+    def _get_score_color(self, score):
+        if score >= 9:
+            return "#e3f2fd"
+        elif score >= 7:
+            return "#e8f5e9"
+        elif score >= 5:
+            return "#fff3e0"
+        elif score >= 3:
+            return "#fce4ec"
+        else:
+            return "#ffebee"
     
 
     def load_data(self):
@@ -285,7 +422,7 @@ class BalanceWheel(QWidget):
         
     def update_chart(self):
         self.figure.clear()
-        
+       
         # Pobieranie aktualnych wartości
         values = []
         labels = []
@@ -295,39 +432,56 @@ class BalanceWheel(QWidget):
                 scores_dict = {score['category']: score['score'] for score in scores}
                 values.append(scores_dict.get(category['name'], 1))
                 labels.append(category['name'])
-        
+       
         # Konwersja na radiany
         angles = np.linspace(0, 2*np.pi, len(labels), endpoint=False)
-        
+       
         # Zamknięcie wykresu
         values.append(values[0])
         angles = np.concatenate((angles, [angles[0]]))
-        
+       
         # Tworzenie wykresu z większymi marginesami
         ax = self.figure.add_subplot(111, projection='polar')
+       
+        # Tutaj usuń te dwie linie:
+        # ax.plot(angles, values, 'o-', linewidth=2, color='#4a90e2')
+        # ax.fill(angles, values, alpha=0.3, color='#4a90e2')
         
-        # Rysowanie wykresu
-        ax.plot(angles, values, 'o-', linewidth=2, color='#4a90e2')
-        ax.fill(angles, values, alpha=0.3, color='#4a90e2')
+        # I zastąp je tym kodem:
+        colors = ['#FF9999', '#66B2FF', '#99FF99', '#FFCC99', '#FF99CC', '#99CCFF', 
+                 '#FFB366', '#99FF99', '#FF99FF', '#66FFCC']
         
+        # Rysowanie każdego obszaru osobno
+        for i in range(len(values)-1):
+            # Tworzymy mini-zestaw danych dla każdego trójkąta
+            sector_angles = [angles[i], angles[i+1], 0]  # Punkt środkowy (0,0)
+            sector_values = [values[i], values[i+1], 0]  # Punkt środkowy (0,0)
+            
+            # Rysujemy wypełniony trójkąt dla każdego sektora
+            ax.fill(sector_angles, sector_values, alpha=0.3, color=colors[i % len(colors)])
+            
+            # Rysujemy linie i punkty
+            ax.plot([angles[i], angles[i+1]], [values[i], values[i+1]], 
+                   'o-', linewidth=2, color=colors[i % len(colors)])
+       
         # Dodanie okręgów pomocniczych
         for i in range(2, 11, 2):
             circle = plt.Circle((0, 0), i, transform=ax.transData._b,
                               fill=False, color='gray', alpha=0.1)
             ax.add_artist(circle)
-        
+       
         # Ustawienia wykresu
         ax.set_thetagrids(angles[:-1] * 180/np.pi, labels)
-        ax.set_ylim(0, 12)  # Zwiększamy górny limit, aby etykiety miały więcej miejsca
+        ax.set_ylim(0, 10)  # Zwiększamy górny limit, aby etykiety miały więcej miejsca
         ax.grid(True)
-        
+       
         # Dostosowanie pozycji etykiet
         ax.tick_params(pad=20)  # Zwiększamy odległość etykiet od wykresu
-        
+       
         # Ustawienie większego marginesu dla całego wykresu
         self.figure.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
-        
+       
         ax.set_facecolor('#f8f9fa')
         self.figure.patch.set_facecolor('#ffffff')
-        
+       
         self.canvas.draw()
