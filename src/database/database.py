@@ -80,7 +80,6 @@ class DatabaseManager:
         self.connection.commit()
         return self.cursor.rowcount > 0
 
-   
 
     def get_smart_goal(self, task_id: int) -> Optional[Dict]:
         """Pobiera cel SMART dla zadania."""
@@ -103,7 +102,6 @@ class DatabaseManager:
             }
         return None
     
-    # Operacje na kole balansu
     def update_balance_score(self, category_id: int, score: int, 
                            date: str = None) -> bool:
         """Aktualizuje wynik w kole balansu."""
@@ -138,7 +136,6 @@ class DatabaseManager:
             })
         return scores
 
-    # Operacje na cytatach
     def get_random_quote(self) -> Optional[Dict]:
         """Pobiera losowy cytat."""
         query = "SELECT text, author FROM quotes ORDER BY RANDOM() LIMIT 1"
@@ -151,7 +148,6 @@ class DatabaseManager:
             }
         return None
 
-    # Operacje na kategoriach
     def get_all_categories(self) -> List[Dict]:
         """Pobiera wszystkie kategorie."""
         query = """
@@ -175,7 +171,6 @@ class DatabaseManager:
     def add_smart_goal(self, goal_data: dict) -> int:
         """Adds a new SMART goal and its subgoals."""
         try:
-            # First, create the main task
             task_query = """
             INSERT INTO tasks (title, category_id, period, target_month)
             VALUES (?, ?, ?, ?)
@@ -188,7 +183,6 @@ class DatabaseManager:
             ))
             task_id = self.cursor.lastrowid
 
-            # Then create the SMART goal details
             smart_query = """
             INSERT INTO smart_goals (
                 task_id, specific, measurable, achievable, 
@@ -204,7 +198,6 @@ class DatabaseManager:
                 goal_data['time_bound']
             ))
 
-            # Add any subgoals
             if goal_data.get('subgoals'):
                 subgoal_query = """
                 INSERT INTO tasks (
@@ -253,7 +246,7 @@ class DatabaseManager:
         self.cursor.execute(query, (category_id, period))
         goals = []
         for row in self.cursor.fetchall():
-            # Get subgoals for this goal
+
             subgoal_query = """
             SELECT id, title, status
             FROM tasks
@@ -277,7 +270,7 @@ class DatabaseManager:
                 'relevant': row[6],
                 'time_bound': row[7],
                 'progress': row[8],
-                'target_month': row[9],  # Dodane
+                'target_month': row[9],  
                 'subgoals': subgoals
             })
         return goals
@@ -292,7 +285,6 @@ class DatabaseManager:
 
     def delete_smart_goal(self, goal_id):
         """Deletes a SMART goal and all its subgoals."""
-        # This will cascade delete the smart_goals entry and all subgoals
         query = "UPDATE tasks SET status = 'deleted' WHERE id = ?"
         self.cursor.execute(query, (goal_id,))
         self.connection.commit()
@@ -333,7 +325,6 @@ class DatabaseManager:
     def update_smart_goal(self, goal_id: int, goal_data: dict) -> bool:
         """Updates an existing SMART goal and its subgoals."""
         try:
-            # Update main task
             task_query = """
             UPDATE tasks 
             SET title = ?,
@@ -346,7 +337,6 @@ class DatabaseManager:
                 goal_id
             ))
 
-            # Update SMART goal details
             smart_query = """
             UPDATE smart_goals 
             SET specific = ?,
@@ -366,10 +356,8 @@ class DatabaseManager:
                 goal_id
             ))
 
-            # Delete existing subgoals
             self.cursor.execute("DELETE FROM tasks WHERE parent_id = ?", (goal_id,))
 
-            # Add updated subgoals
             if goal_data.get('subgoals'):
                 subgoal_query = """
                 INSERT INTO tasks (
@@ -396,7 +384,6 @@ class DatabaseManager:
 
     def get_smart_goal_details(self, goal_id: int) -> Dict:
         """Gets full details of a SMART goal including subgoals."""
-        # Get main goal data
         query = """
         SELECT 
             t.title,
@@ -417,7 +404,6 @@ class DatabaseManager:
         if not row:
             return None
             
-        # Get subgoals
         subgoal_query = """
         SELECT id, title, status
         FROM tasks
@@ -500,7 +486,7 @@ class DatabaseManager:
                 'created_at': row[4],
                 'updated_at': row[5]
             })
-        return reflections  # Dodana instrukcja return
+        return reflections  
     
     def delete_reflection(self, category_id: int) -> bool:
         """Usuwa refleksję dla danej kategorii."""
@@ -511,14 +497,12 @@ class DatabaseManager:
 
     def get_tasks_by_category_and_date_range(self, category_id: int, start_date: str, end_date: str) -> List[Dict]:
         """Pobiera zadania dla danej kategorii w określonym zakresie dat."""
-        # Mapowanie angielskich nazw miesięcy na polskie
         month_mapping = {
             1: 'Styczeń', 2: 'Luty', 3: 'Marzec', 4: 'Kwiecień',
             5: 'Maj', 6: 'Czerwiec', 7: 'Lipiec', 8: 'Sierpień',
             9: 'Wrzesień', 10: 'Październik', 11: 'Listopad', 12: 'Grudzień'
         }
         
-        # Wyciągnij miesiąc i rok z daty startowej
         start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
         target_month = f"{month_mapping[start_date_obj.month]} {start_date_obj.year}"
         
@@ -543,7 +527,6 @@ class DatabaseManager:
         tasks = []
         for row in self.cursor.fetchall():
             is_smart_goal = False
-            # Sprawdź czy to cel SMART
             self.cursor.execute("SELECT 1 FROM smart_goals WHERE task_id = ?", (row[0],))
             if self.cursor.fetchone():
                 is_smart_goal = True
@@ -572,7 +555,6 @@ class DatabaseManager:
         """
         status = 'completed' if completed else 'active'
         
-        # Pobierz informacje o głównym celu
         query = """
         SELECT category_id, period
         FROM tasks
@@ -586,7 +568,6 @@ class DatabaseManager:
             
         category_id, period = parent_info
         
-        # Dodaj nowy podcel
         query = """
         INSERT INTO tasks (
             title, category_id, parent_id, status, period
@@ -603,7 +584,6 @@ class DatabaseManager:
         subgoal_id = self.cursor.lastrowid
         self.connection.commit()
         
-        # Zaktualizuj postęp głównego celu
         subgoals = self.get_subgoals_by_goal(goal_id)
         total = len(subgoals)
         completed_count = len([sg for sg in subgoals if sg['completed']])

@@ -3,11 +3,9 @@ import os
 from datetime import datetime
 
 def create_database():
-    # Sprawdź czy baza już istnieje
     db_exists = os.path.exists("mirai.db")
     print(f"Czy baza danych istnieje: {db_exists}")
     
-    # Jeśli istnieje - usuń
     if db_exists:
         os.remove("mirai.db")
         print("Usunięto istniejącą bazę danych")
@@ -100,7 +98,6 @@ def create_database():
     )
     """)
 
-    # Dodaj po utworzeniu innych tabel, przed commitowaniem zmian:
     print("Tworzenie tabeli reflections...")
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS reflections (
@@ -119,7 +116,7 @@ def create_database():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_category ON tasks(category_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_deadline ON tasks(deadline)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_period ON tasks(period)")  # Nowy indeks dla period
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_period ON tasks(period)") 
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_balance_category_date ON balance(category_id, date)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_smart_goals_task ON smart_goals(task_id)")
 

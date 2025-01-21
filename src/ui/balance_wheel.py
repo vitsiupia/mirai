@@ -10,7 +10,6 @@ from matplotlib.figure import Figure
 import numpy as np
 from datetime import datetime
 import matplotlib
-import matplotlib
 matplotlib.rcParams['font.family'] = ['Segoe UI Emoji', 'Arial', 'DejaVu Sans']
 matplotlib.rcParams['font.sans-serif'] = ['Segoe UI Emoji', 'Arial', 'DejaVu Sans']
 matplotlib.rcParams['axes.unicode_minus'] = False
@@ -28,9 +27,8 @@ class BalanceWheel(QWidget):
         
     def setup_ui(self):
         main_layout = QHBoxLayout(self)
-        main_layout.setSpacing(20)  # Zwiększony odstęp między panelami
+        main_layout.setSpacing(20)  
         
-        # Lewy panel z wykresem (zmniejszony)
         left_panel = QFrame()
         left_panel.setStyleSheet("""
             QFrame {
@@ -42,15 +40,13 @@ class BalanceWheel(QWidget):
             }
         """)
         left_layout = QVBoxLayout(left_panel)
-        left_panel.setMinimumWidth(800)  # Zmniejszona minimalna szerokość
-        left_panel.setMaximumWidth(850)  # Maksymalna szerokość
+        left_panel.setMinimumWidth(800)  
+        left_panel.setMaximumWidth(850)  
         
-        # Tworzenie wykresu
-        self.figure = Figure(figsize=(4, 4))  # Zmniejszony rozmiar wykresu
+        self.figure = Figure(figsize=(4, 4)) 
         self.canvas = FigureCanvas(self.figure)
         left_layout.addWidget(self.canvas)
         
-        # Przycisk "Skala Ocen"
         scale_button = QPushButton("Skala Ocen")
         scale_button.setStyleSheet("""
             QPushButton {
@@ -73,7 +69,6 @@ class BalanceWheel(QWidget):
         
         main_layout.addWidget(left_panel)
 
-        # Środkowy panel z kontrolkami
         middle_panel = QFrame()
         middle_panel.setStyleSheet("""
             QFrame {
@@ -88,8 +83,8 @@ class BalanceWheel(QWidget):
                 color: #333;
             }
         """)
-        middle_panel.setMinimumWidth(200)  # Zmniejszona szerokość
-        middle_panel.setMaximumWidth(500)  # Zmniejszona maksymalna szerokość
+        middle_panel.setMinimumWidth(200)  
+        middle_panel.setMaximumWidth(500)  
         middle_layout = QVBoxLayout(middle_panel)
         middle_layout.setSpacing(10)
         middle_layout.setContentsMargins(-35, -20, 20, 20)
@@ -105,12 +100,12 @@ class BalanceWheel(QWidget):
             }
         """)
 
-        header_container.setMinimumWidth(350)  # Zwiększenie minimalnej szerokości
+        header_container.setMinimumWidth(350)  
         header_container.setMaximumWidth(550)
 
         # Inicjalizacja układu
         header_layout = QVBoxLayout(header_container)
-        header_layout.setContentsMargins(0, -50, -60, 0)  # Teraz poprawnie ustawione
+        header_layout.setContentsMargins(0, -50, -60, 0) 
         header_layout.setSpacing(4)
 
         title = QLabel("POZIOM ZADOWOLENIA Z ŻYCIA")
@@ -124,8 +119,6 @@ class BalanceWheel(QWidget):
         description.setWordWrap(True)
         description.setStyleSheet("color: #666; border: none;")
         header_layout.addWidget(description)
-
-        
         
         middle_layout.addWidget(header_container)
         
@@ -133,22 +126,19 @@ class BalanceWheel(QWidget):
         self.categories_container = QVBoxLayout()
         self.categories_container.setSpacing(12)
         middle_layout.addLayout(self.categories_container)
-        
+    
         middle_layout.addStretch()
         
         main_layout.addWidget(middle_panel)
         
-        # Dodanie elastycznej przestrzeni, która przesunie panele w lewo
         main_layout.addStretch(1)
 
-        # Prawy panel z notatnikiem refleksji
         right_panel = ReflectionNotebook(self.db_manager)
         right_panel.setMinimumWidth(600)  # Minimalna szerokość
         right_panel.setMaximumWidth(650)  # Maksymalna szerokość
         main_layout.addWidget(right_panel)
 
     def create_category_widget(self, category, score):
-        # Główny kontener
         container = QWidget()
         container.setFixedHeight(50)
         container.setStyleSheet("""
@@ -159,19 +149,16 @@ class BalanceWheel(QWidget):
             }
         """)
         
-        # Układ poziomy
         layout = QHBoxLayout(container)
         layout.setContentsMargins(15, 10, 15, 10)
         layout.setSpacing(10)
         
-        # Container dla nazwy kategorii - ustaw stałą szerokość
         name_container = QWidget()
-        name_container.setFixedWidth(250)  # Stała szerokość dla wszystkich nazw
+        name_container.setFixedWidth(250)  
         name_container.setStyleSheet("border: none;")
         name_layout = QHBoxLayout(name_container)
         name_layout.setContentsMargins(0, 0, 0, 0)
         
-        # Nazwa kategorii
         name_label = QLabel(category['name'])
         name_label.setFont(QFont("Segoe UI", 11))
         name_label.setStyleSheet("""
@@ -182,12 +169,10 @@ class BalanceWheel(QWidget):
             }
         """)
         name_layout.addWidget(name_label)
-        name_layout.addStretch()  # Dodaje elastyczną przestrzeń po prawej stronie nazwy
+        name_layout.addStretch() 
         
-        # Dodaj container z nazwą do głównego layoutu
         layout.addWidget(name_container)
         
-        # SpinBox dla oceny
         spinbox = QSpinBox()
         spinbox.setStyleSheet("""
             QSpinBox {
@@ -214,10 +199,8 @@ class BalanceWheel(QWidget):
         spinbox.setAlignment(Qt.AlignCenter)
         layout.addWidget(spinbox)
         
-        # Automatyczne zapisywanie i aktualizacja przy zmianie wartości
         spinbox.valueChanged.connect(lambda value: self.save_and_update(category['id'], value))
         
-        # Dodaj wypełniacz po prawej stronie
         layout.addStretch()
         
         return container
@@ -225,10 +208,9 @@ class BalanceWheel(QWidget):
     def show_scale_description(self):
         dialog = QDialog(self)
         dialog.setWindowTitle("Skala Ocen")
-        dialog.setMinimumWidth(600)  # Minimalna szerokość
-        dialog.setMinimumHeight(400)  # Minimalna wysokość
+        dialog.setMinimumWidth(600)  
+        dialog.setMinimumHeight(400)  
         
-        # Ustawienie domyślnego rozmiaru (można zmieniać)
         dialog.resize(800, 600)
         
         dialog.setStyleSheet("""
@@ -253,23 +235,20 @@ class BalanceWheel(QWidget):
             }
         """)
         
-        # Główny layout
+
         main_layout = QVBoxLayout(dialog)
         main_layout.setSpacing(12)
         main_layout.setContentsMargins(15, 15, 15, 15)
         
-        # Scroll area
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setStyleSheet("background-color: white;")
         
-        # Główny kontener
         container = QWidget()
         container_layout = QVBoxLayout(container)
         container_layout.setSpacing(10)
         container_layout.setContentsMargins(0, 0, 0, 0)
         
-        # Grid do układu dwukolumnowego
         grid_layout = QGridLayout()
         grid_layout.setSpacing(8)
         
@@ -296,7 +275,6 @@ class BalanceWheel(QWidget):
             "Absolutnie nie jesteś zadowolony z tego obszaru swojego życia. Czujesz, że nie działa on w ogóle, brak postępów i pozytywnych emocji. Możliwe jest uczucie frustracji, przygnębienia lub bezsilności.")
         ]
         
-        # Wypełnienie siatki
         for i, (score, title, description) in enumerate(scale_descriptions):
             score_widget = QFrame()
             score_widget.setStyleSheet(f"""
@@ -311,7 +289,6 @@ class BalanceWheel(QWidget):
             score_layout.setSpacing(8)
             score_layout.setContentsMargins(10, 8, 10, 8)
             
-            # Numer
             number_label = QLabel(f"{score}")
             number_label.setStyleSheet("""
                 QLabel {
@@ -323,11 +300,9 @@ class BalanceWheel(QWidget):
             """)
             score_layout.addWidget(number_label)
             
-            # Kontener na tytuł i opis
             text_container = QVBoxLayout()
             text_container.setSpacing(2)
             
-            # Tytuł
             title_label = QLabel(title)
             title_label.setStyleSheet("""
                 QLabel {
@@ -338,7 +313,6 @@ class BalanceWheel(QWidget):
             """)
             text_container.addWidget(title_label)
             
-            # Opis
             desc_label = QLabel(description)
             desc_label.setWordWrap(True)
             desc_label.setStyleSheet("""
@@ -351,9 +325,8 @@ class BalanceWheel(QWidget):
             text_container.addWidget(desc_label)
             
             score_layout.addLayout(text_container)
-            score_layout.setStretch(1, 1)  # Rozciągnij tekst
+            score_layout.setStretch(1, 1)  
             
-            # Dodaj do siatki (5 elementów w każdej kolumnie)
             row = i % 5
             col = i // 5
             grid_layout.addWidget(score_widget, row, col)
@@ -362,13 +335,11 @@ class BalanceWheel(QWidget):
         scroll.setWidget(container)
         main_layout.addWidget(scroll)
         
-        # Panel z przyciskiem na dole
         button_panel = QWidget()
         button_layout = QHBoxLayout(button_panel)
         button_layout.setContentsMargins(0, 0, 0, 0)
-        button_layout.addStretch()  # Elastyczna przestrzeń przed przyciskiem
+        button_layout.addStretch()  
         
-        # Przycisk zamykający
         close_button = QPushButton("Zamknij")
         close_button.setCursor(Qt.PointingHandCursor)
         button_layout.addWidget(close_button)
@@ -395,19 +366,16 @@ class BalanceWheel(QWidget):
             self.categories = db.get_all_categories()
             scores = db.get_balance_scores()
         
-        # Czyszczenie kontenera kategorii
         for i in reversed(range(self.categories_container.count())):
             widget = self.categories_container.itemAt(i).widget()
             if widget:
                 widget.setParent(None)
         
-        # Tworzenie słownika ocen
         scores_dict = {score['category']: score['score'] for score in scores}
         
-        # Tworzenie widgetów dla każdej kategorii
         self.category_widgets = []
         for category in self.categories:
-            score = scores_dict.get(category['name'], 5)  # Domyślna wartość 5
+            score = scores_dict.get(category['name'], 5)  
             widget = self.create_category_widget(category, score)
             self.categories_container.addWidget(widget)
             self.category_widgets.append((category['id'], widget))
@@ -423,7 +391,6 @@ class BalanceWheel(QWidget):
     def update_chart(self):
         self.figure.clear()
        
-        # Pobieranie aktualnych wartości
         values = []
         labels = []
         for category in self.categories:
@@ -433,52 +400,35 @@ class BalanceWheel(QWidget):
                 values.append(scores_dict.get(category['name'], 1))
                 labels.append(category['name'])
        
-        # Konwersja na radiany
         angles = np.linspace(0, 2*np.pi, len(labels), endpoint=False)
        
-        # Zamknięcie wykresu
         values.append(values[0])
         angles = np.concatenate((angles, [angles[0]]))
        
-        # Tworzenie wykresu z większymi marginesami
         ax = self.figure.add_subplot(111, projection='polar')
-       
-        # Tutaj usuń te dwie linie:
-        # ax.plot(angles, values, 'o-', linewidth=2, color='#4a90e2')
-        # ax.fill(angles, values, alpha=0.3, color='#4a90e2')
-        
-        # I zastąp je tym kodem:
         colors = ['#FF9999', '#66B2FF', '#99FF99', '#FFCC99', '#FF99CC', '#99CCFF', 
                  '#FFB366', '#99FF99', '#FF99FF', '#66FFCC']
         
-        # Rysowanie każdego obszaru osobno
         for i in range(len(values)-1):
-            # Tworzymy mini-zestaw danych dla każdego trójkąta
-            sector_angles = [angles[i], angles[i+1], 0]  # Punkt środkowy (0,0)
-            sector_values = [values[i], values[i+1], 0]  # Punkt środkowy (0,0)
+            sector_angles = [angles[i], angles[i+1], 0]  
+            sector_values = [values[i], values[i+1], 0] 
             
-            # Rysujemy wypełniony trójkąt dla każdego sektora
             ax.fill(sector_angles, sector_values, alpha=0.3, color=colors[i % len(colors)])
             
-            # Rysujemy linie i punkty
             ax.plot([angles[i], angles[i+1]], [values[i], values[i+1]], 
                    'o-', linewidth=2, color=colors[i % len(colors)])
        
-        # Dodanie okręgów pomocniczych
         for i in range(2, 11, 2):
             circle = plt.Circle((0, 0), i, transform=ax.transData._b,
                               fill=False, color='gray', alpha=0.1)
             ax.add_artist(circle)
        
-        # Ustawienia wykresu
         ax.set_thetagrids(angles[:-1] * 180/np.pi, labels)
-        ax.set_ylim(0, 10)  # Zwiększamy górny limit, aby etykiety miały więcej miejsca
+        ax.set_ylim(0, 10)  
         ax.grid(True)
        
-        # Dostosowanie pozycji etykiet
-        ax.tick_params(pad=20)  # Zwiększamy odległość etykiet od wykresu
+        ax.tick_params(pad=20)  
        
-        # Ustawienie większego marginesu dla całego wykresu
         self.figure.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
        
         ax.set_facecolor('#f8f9fa')

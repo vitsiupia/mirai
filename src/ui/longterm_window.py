@@ -24,7 +24,6 @@ class LongTermTaskDialog(QDialog):
         self.setMinimumWidth(500)
         layout = QVBoxLayout(self)
         
-        # Tytuł celu
         self.title_edit = QLineEdit()
         self.title_edit.setPlaceholderText("Nazwa celu")
         self.title_edit.setStyleSheet("""
@@ -37,7 +36,6 @@ class LongTermTaskDialog(QDialog):
         """)
         layout.addWidget(self.title_edit)
         
-        # Opis celu
         self.description_edit = QTextEdit()
         self.description_edit.setPlaceholderText("Opis celu")
         self.description_edit.setStyleSheet("""
@@ -49,7 +47,6 @@ class LongTermTaskDialog(QDialog):
         """)
         layout.addWidget(self.description_edit)
         
-        # Data zakończenia
         deadline_label = QLabel("Termin realizacji:")
         layout.addWidget(deadline_label)
         
@@ -66,7 +63,6 @@ class LongTermTaskDialog(QDialog):
         """)
         layout.addWidget(self.calendar)
         
-        # Przyciski
         buttons_layout = QHBoxLayout()
         
         save_button = QPushButton("Zapisz")
@@ -119,7 +115,7 @@ class LongTermTaskDialog(QDialog):
         layout.addLayout(buttons_layout)
 
     def show_smart_dialog(self):
-        from smart_goals_dialog import SmartGoalsDialog  # Import here to avoid circular dependency
+        from smart_goals_dialog import SmartGoalsDialog  
         dialog = SmartGoalsDialog(self.category_id, self)
         if dialog.exec_() == QDialog.Accepted:
             self.accept()
@@ -146,9 +142,8 @@ class LongTermTaskBlock(QFrame):
 
     def setup_ui(self):
         self.setObjectName("taskBlock")
-        # Usuwamy setMinimumSize i dodajemy tylko minimalną szerokość
         self.setMinimumWidth(450)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # Zmiana na Minimum
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  
         self.setStyleSheet("""
             #taskBlock {
                 background-color: white;
@@ -162,7 +157,6 @@ class LongTermTaskBlock(QFrame):
         self.layout.setSpacing(8)
         self.layout.setContentsMargins(15, 15, 15, 15)
         
-        # Nagłówek kategorii
         header_container = QWidget()
         header_layout = QVBoxLayout(header_container)
         header_layout.setContentsMargins(0, 0, 0, 0)
@@ -181,7 +175,6 @@ class LongTermTaskBlock(QFrame):
         
         self.layout.addWidget(header_container)
         
-        # Kontener na zadania
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QFrame.NoFrame)
@@ -206,7 +199,6 @@ class LongTermTaskBlock(QFrame):
         scroll_area.setWidget(self.tasks_container)
         self.layout.addWidget(scroll_area)
         
-        # Przycisk dodawania
         add_button = QPushButton("+ Dodaj cel SMART")
         add_button.setStyleSheet("""
             QPushButton {
@@ -226,10 +218,9 @@ class LongTermTaskBlock(QFrame):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        # Dostosuj wysokość na podstawie zawartości
         if hasattr(self, 'tasks_layout'):
             content_height = self.tasks_layout.sizeHint().height()
-            min_height = max(300, content_height + 150)  # 150 to przestrzeń na nagłówek i przycisk
+            min_height = max(300, content_height + 150)  
             self.setMinimumHeight(min_height)
 
     def show_goal_details(self, goal_data):
@@ -238,7 +229,7 @@ class LongTermTaskBlock(QFrame):
 
     def add_goal_widget(self, goal_data):
         goal_widget = QFrame()
-        goal_widget.setCursor(Qt.PointingHandCursor)  # Zmiana kursora na wskazujący
+        goal_widget.setCursor(Qt.PointingHandCursor)  
         goal_widget.mousePressEvent = lambda e: self.show_goal_details(goal_data)
         goal_widget.setStyleSheet("""
             QFrame {
@@ -258,7 +249,6 @@ class LongTermTaskBlock(QFrame):
         goal_layout.setSpacing(4)
         goal_layout.setContentsMargins(8, 8, 8, 8)
         
-        # Nagłówek z tytułem i przyciskami
         header_widget = QWidget()
         header_layout = QHBoxLayout(header_widget)
         header_layout.setContentsMargins(0, 0, 0, 0)
@@ -268,7 +258,6 @@ class LongTermTaskBlock(QFrame):
         if goal_data['status'] == 'completed':
             title_label.setStyleSheet("text-decoration: line-through; color: #888;")
         
-        # Pasek postępu
         progress_bar = QProgressBar()
         progress_bar.setValue(goal_data['progress'])
         progress_bar.setStyleSheet("""
@@ -283,7 +272,6 @@ class LongTermTaskBlock(QFrame):
             }
         """)
         
-        # Przycisk edycji
         edit_button = QPushButton("🖊️")
         edit_button.setFixedSize(22, 22)
         edit_button.setStyleSheet("""
@@ -321,7 +309,6 @@ class LongTermTaskBlock(QFrame):
         
         goal_layout.addWidget(header_widget)
         
-        # Podsekcja z podcelami
         if goal_data['subgoals']:
             subgoals_widget = QWidget()
             subgoals_layout = QVBoxLayout(subgoals_widget)
@@ -357,12 +344,10 @@ class LongTermTaskBlock(QFrame):
 
     def edit_smart_goal(self, goal_id):
         try:
-            # Pobierz pełne dane celu
             with self.db_manager as db:
                 goal_data = db.get_smart_goal_details(goal_id)
                 
             if goal_data:
-                # Otwórz dialog z załadowanymi danymi
                 dialog = SmartGoalsDialog(self.category_id, self, goal_data)
                 if dialog.exec_() == QDialog.Accepted:
                     updated_data = dialog.get_smart_goal_data()
@@ -380,18 +365,17 @@ class LongTermTaskBlock(QFrame):
             dialog = SmartGoalsDialog(self.category_id, self)
             if dialog.exec_() == QDialog.Accepted:
                 goal_data = dialog.get_smart_goal_data()
-                print("Otrzymane dane celu SMART:", goal_data)  # Debug
+                print("Otrzymane dane celu SMART:", goal_data)  
 
                 with self.db_manager as db:
                     task_id = db.add_smart_goal(goal_data)
-                    print(f"Utworzono cel SMART z ID: {task_id}")  # Debug
+                    print(f"Utworzono cel SMART z ID: {task_id}")  
                 
-                print("Odświeżanie widoku celów...")  # Debug
+                print("Odświeżanie widoku celów...")  
                 self.load_smart_goals()
-                print("Zakończono odświeżanie widoku.")  # Debug
+                print("Zakończono odświeżanie widoku.")  
         except Exception as e:
             print(f"Błąd podczas dodawania celu SMART: {e}")
-            # Możesz też dodać wyświetlanie komunikatu o błędzie dla użytkownika
             QMessageBox.critical(self, "Błąd", f"Nie udało się dodać celu SMART: {str(e)}")
 
     def delete_smart_goal(self, goal_id):
@@ -403,27 +387,22 @@ class LongTermTaskBlock(QFrame):
         with self.db_manager as db:
             db.update_subgoal_status(subgoal_id, completed)
             
-            # Pobierz cel związany z podzadaniem
             goal_id = db.get_goal_id_by_subgoal(subgoal_id)
             
-            # Oblicz nowy postęp
             subgoals = db.get_subgoals_by_goal(goal_id)
             completed_count = sum(1 for s in subgoals if s['completed'])
             progress = int((completed_count / len(subgoals)) * 100) if subgoals else 0
             
-            # Zaktualizuj postęp w bazie danych
             db.update_goal_progress(goal_id, progress)
             
         self.load_smart_goals()
 
     def load_smart_goals(self):
-        # Wyczyść istniejące cele
         while self.tasks_layout.count():
             child = self.tasks_layout.takeAt(0)
             if child.widget():
                 child.widget().deleteLater()
 
-        # Załaduj cele z bazy danych
         with self.db_manager as db:
             goals = db.get_smart_goals_by_period(self.category_id, self.period)
             
@@ -448,7 +427,6 @@ class LongTermWindow(QMainWindow):
         main_layout.setSpacing(10)
         main_layout.setContentsMargins(10, 10, 10, 10)
         
-        # Main container
         self.main_container = QFrame()
         self.main_container.setObjectName("mainTaskContainer")
         self.main_container.setStyleSheet("""
@@ -501,21 +479,18 @@ class LongTermWindow(QMainWindow):
         self.main_container_layout = QVBoxLayout(self.main_container)
         self.main_container_layout.setSpacing(20)
         
-        # Nowy header z comboboxem
         self.header_container = QWidget()
         self.header_layout = QHBoxLayout(self.header_container)
         self.header_layout.setSpacing(15)
         self.header_layout.setContentsMargins(0, 0, 0, 0)
         self.header_layout.setAlignment(Qt.AlignCenter)
 
-        # Period header label
         self.period_header = QLabel("Plan na:")
         self.period_header.setFont(QFont("Segoe UI", 24, QFont.Bold))
         self.period_header.setStyleSheet("""
             color: #2c3e50;
         """)
 
-        # Modern Combobox
         self.period_combo = QComboBox()
         self.period_combo.addItems(["5-10 lat", "1 rok", "6 miesięcy", "3 miesiące"])
         
@@ -551,19 +526,15 @@ class LongTermWindow(QMainWindow):
         self.period_combo.lineEdit().setAlignment(Qt.AlignCenter)
         self.period_combo.setEditable(False)
 
-        # Optional: Add some additional customization
         self.period_combo.setFixedWidth(200)
         self.period_combo.setEditable(False)
 
-        # Add widgets to layout
         self.header_layout.addWidget(self.period_header)
         self.header_layout.addWidget(self.period_combo)
 
-        # Add to main container
         self.main_container_layout.addWidget(self.header_container)
         self.main_container_layout.setAlignment(self.header_container, Qt.AlignCenter)
 
-            # Scroll area
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -582,28 +553,22 @@ class LongTermWindow(QMainWindow):
         
         main_layout.addWidget(self.main_container)
         
-        # Connect period change event
         self.period_combo.currentTextChanged.connect(self.load_period_tasks)
         
-        # Initial load
         self.load_period_tasks(self.period_combo.currentText())
 
     def load_period_tasks(self, period):
-        # Clear existing blocks
         while self.scroll_layout.count():
             child = self.scroll_layout.takeAt(0)
             if child.widget():
                 child.widget().deleteLater()
 
-        # Load categories
         with self.db_manager as db:
             categories = db.get_all_categories()
         
-        # Add empty widget if odd number of categories
         if len(categories) % 2 == 1:
             categories.append(None)
             
-        # Create blocks
         for i, category in enumerate(categories):
             if category:
                 block = LongTermTaskBlock(
@@ -634,7 +599,6 @@ class GoalDetailsDialog(QDialog):
         layout.setSpacing(10)
         layout.setContentsMargins(15, 15, 15, 15)
         
-        # Tytuł i przyciski w jednej linii
         header = QHBoxLayout()
         title = QLabel(self.goal_data['title'])
         title.setFont(QFont("Segoe UI", 12, QFont.Bold))
@@ -654,7 +618,6 @@ class GoalDetailsDialog(QDialog):
         header.addWidget(edit_button)
         layout.addLayout(header)
 
-        # Status i separator
         info_layout = QHBoxLayout()
         status_text = "✅ Zakończone" if self.goal_data['status'] == 'completed' else "⏳ W trakcie"
         status_label = QLabel(status_text)
@@ -663,18 +626,16 @@ class GoalDetailsDialog(QDialog):
         info_layout.addStretch()
         layout.addLayout(info_layout)
 
-        # Separator
         separator = QFrame()
         separator.setFrameShape(QFrame.HLine)
         separator.setFrameShadow(QFrame.Sunken)
         separator.setStyleSheet("background-color: #e0e0e0; margin: 5px 0;")
         layout.addWidget(separator)
         
-        # Pasek postępu
         progress_layout = QHBoxLayout()
         self.progress_bar = QProgressBar()
         self.progress_bar.setValue(self.goal_data['progress'])
-        self.progress_bar.setFormat("%p%")  # Set format to show only one percentage
+        self.progress_bar.setFormat("%p%")  
         self.progress_bar.setStyleSheet("""
             QProgressBar {
                 border: 1px solid #ddd;
@@ -689,7 +650,6 @@ class GoalDetailsDialog(QDialog):
         progress_layout.addWidget(self.progress_bar)
         layout.addLayout(progress_layout)
 
-        # Kryteria SMART w kompaktowej formie
         smart_frame = QFrame()
         smart_frame.setStyleSheet("""
             QFrame { 
@@ -699,7 +659,7 @@ class GoalDetailsDialog(QDialog):
             }
         """)
         smart_layout = QVBoxLayout(smart_frame)
-        smart_layout.setSpacing(8)  # Zwiększony odstęp między wierszami
+        smart_layout.setSpacing(8)  
         
         criteria = [
             ("S", "Specific", "Konkretny", self.goal_data['specific']),
@@ -711,11 +671,10 @@ class GoalDetailsDialog(QDialog):
         
         for letter, eng_name, pl_name, content in criteria:
             criterion_layout = QHBoxLayout()
-            criterion_layout.setSpacing(10)  # Stały odstęp między elementami
+            criterion_layout.setSpacing(10)  
             
-            # Container dla etykiet (litera + nazwy)
             labels_widget = QWidget()
-            labels_widget.setFixedWidth(230)  # Stała szerokość dla wszystkich etykiet
+            labels_widget.setFixedWidth(230)  
             labels_layout = QHBoxLayout(labels_widget)
             labels_layout.setContentsMargins(0, 0, 0, 0)
             
@@ -733,10 +692,9 @@ class GoalDetailsDialog(QDialog):
             labels_layout.addWidget(name_label)
             labels_layout.addStretch()
             
-            # Content label
             content_label = QLabel(content)
             content_label.setWordWrap(True)
-            content_label.setMinimumWidth(200)  # Minimalna szerokość dla treści
+            content_label.setMinimumWidth(200)  
             content_label.setStyleSheet("""
                 QLabel {
                     background-color: white;
@@ -748,12 +706,11 @@ class GoalDetailsDialog(QDialog):
             """)
             
             criterion_layout.addWidget(labels_widget)
-            criterion_layout.addWidget(content_label, 1)  # Stretch factor 1 dla content
+            criterion_layout.addWidget(content_label, 1) 
             smart_layout.addLayout(criterion_layout)
             
         layout.addWidget(smart_frame)
         
-        # Podcele w formie listy checkboxów
         if self.goal_data.get('subgoals'):
             subgoals_frame = QFrame()
             subgoals_frame.setStyleSheet("QFrame { background-color: #f8f9fa; border-radius: 4px; padding: 10px; }")
@@ -772,7 +729,6 @@ class GoalDetailsDialog(QDialog):
             
             layout.addWidget(subgoals_frame)
         
-        # Przycisk zamknięcia
         close_button = QPushButton("Zamknij")
         close_button.setStyleSheet("""
             QPushButton {
