@@ -54,7 +54,7 @@ class ReflectionDialog(QDialog):
 
 class ReflectionListItem(QWidget):
     clicked = pyqtSignal(str, str)
-    edit_clicked = pyqtSignal(str, str)  # Nowy sygnał dla edycji
+    edit_clicked = pyqtSignal(str, str) 
     delete_clicked = pyqtSignal(str)  # Nowy sygnał dla usuwania
     
     def __init__(self, category_name: str, content: str, parent=None):
@@ -447,11 +447,9 @@ class ReflectionNotebook(QWidget):
                 self.category_combo.addItem(category['name'], category['id'])
                 
     def load_reflections(self):
-        """Ładuje wszystkie refleksje do widoku listy."""
         with self.db_manager as db:
             reflections = db.get_all_reflections()
 
-        # Wyczyść istniejące widgety
         while self.list_layout.count():
             item = self.list_layout.takeAt(0)
             if item.widget():
@@ -570,14 +568,12 @@ class ReflectionNotebook(QWidget):
             return
             
         with self.db_manager as db:
-            # Sprawdź czy istnieje refleksja dla tej kategorii
             existing = db.get_reflection(category_id)
             if existing:
                 db.update_reflection(category_id, content)
             else:
                 db.add_reflection(category_id, content)
                 
-        # Wyczyść formularz i przełącz na listę
         self.text_edit.clear()
         self.stacked_widget.setCurrentIndex(0)
-        self.load_reflections()  # Odśwież listę
+        self.load_reflections() 

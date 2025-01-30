@@ -15,6 +15,82 @@ from datetime import datetime
 from src.ui.smart_goals_dialog import SmartGoalsDialog
 from datetime import datetime, timedelta
 from PyQt5.QtCore import pyqtSignal
+from typing import Dict, List, Callable
+import threading
+
+class Observer:
+    def update(self, state_changes: Dict):
+        pass
+
+class Subject:
+    def __init__(self):
+        self._observers: List[Observer] = []
+        self._state: Dict = {
+            'tasks': [],
+            'goals': [],
+            'balance_scores': [],
+            'settings': {}
+        }
+        self._lock = threading.Lock()
+
+    def attach(self, observer: Observer):
+        with self._lock:
+            if observer not in self._observers:
+                self._observers.append(observer)
+
+    def detach(self, observer: Observer):
+        with self._lock:
+            if observer in self._observers:
+                self._observers.remove(observer)
+
+    def notify(self, state_changes: Dict):
+        with self._lock:
+            for observer in self._observers:
+                observer.update(state_changes)
+
+    def update_state(self, section: str, data, notify: bool = True):
+        with self._lock:
+            self._state[section] = data
+            if notify:
+                self.notify({section: data})
+
+    def get_state(self, section: str = None):
+        with self._lock:
+            return self._state[section] if section else self._state
+
+class ApplicationStateManager(Subject):
+    def __init__(self, db_manager):
+        super().__init__()
+        self.db_manager = db_manager
+        self._state_update_callbacks: Dict[str, List[Callable]] = {}
+
+    def register_state_update_callback(self, section: str, callback: Callable):
+        if section not in self._state_update_callbacks:
+            self._state_update_callbacks[section] = []
+        self._state_update_callbacks[section].append(callback)
+
+    def update_state(self, section: str, data, notify: bool = True):
+        super().update_state(section, data, notify)
+        
+        # Wywołaj zarejestrowane callbacki
+        if section in self._state_update_callbacks:
+            for callback in self._state_update_callbacks[section]:
+                callback(data)
+
+class UIComponent(Observer):
+    def __init__(self, state_manager: ApplicationStateManager):
+        self.state_manager = state_manager
+        self.state_manager.attach(self)
+
+    def update(self, state_changes: Dict):
+        # Implementacja aktualizacji konkretnego widoku
+        for section, data in state_changes.items():
+            self._handle_state_update(section, data)
+
+    def _handle_state_update(self, section: str, data):
+        # Metoda do nadpisania w konkretnych klasach interfejsu
+        pass
+    
 
 class TaskDialog(QDialog):
     def __init__(self, category_id, parent=None):
@@ -454,7 +530,7 @@ class TaskBlock(QFrame):
         dialog.exec_()
 
     def update_task_status(self, task_id, state):
-        status = 'completed' if state == Qt.Checked else 'active'
+        status = 'completed' if state == Qt.Checked else 'in_progress'
         with self.db_manager as db:  # Użycie context managera
             db.update_task_status(task_id, status)
         self.load_tasks()
@@ -532,19 +608,52 @@ class MonthYearSelector(QWidget):
         month_name = months[self.current_date.month]
         self.date_label.setText(f"Plan na {month_name} {self.current_date.year}")
         self.month_changed.emit(self.current_date)
+
+    def get_last_day_of_month(self, year, month):
+        """Get the last day of the given month."""
+        if month == 12:
+            next_month = datetime(year + 1, 1, 1)
+        else:
+            next_month = datetime(year, month + 1, 1)
+        return (next_month - timedelta(days=1)).day
         
     def previous_month(self):
-        if self.current_date.month == 1:
-            self.current_date = self.current_date.replace(year=self.current_date.year - 1, month=12)
+        year = self.current_date.year
+        month = self.current_date.month
+        day = self.current_date.day
+
+        if month == 1:
+            year -= 1
+            month = 12
         else:
-            self.current_date = self.current_date.replace(month=self.current_date.month - 1)
+            month -= 1
+            
+        # Get the last day of the target month
+        last_day = self.get_last_day_of_month(year, month)
+        # Adjust the day if it exceeds the last day of the target month
+        day = min(day, last_day)+0
+        
+        
+        self.current_date = self.current_date.replace(year=year, month=month, day=day)
         self.update_label()
         
     def next_month(self):
-        if self.current_date.month == 12:
-            self.current_date = self.current_date.replace(year=self.current_date.year + 1, month=1)
+        year = self.current_date.year
+        month = self.current_date.month
+        day = self.current_date.day
+
+        if month == 12:
+            year += 1
+            month = 1
         else:
-            self.current_date = self.current_date.replace(month=self.current_date.month + 1)
+            month += 1
+            
+        # Get the last day of the target month
+        last_day = self.get_last_day_of_month(year, month)
+        # Adjust the day if it exceeds the last day of the target month
+        day = min(day, last_day)
+        
+        self.current_date = self.current_date.replace(year=year, month=month, day=day)
         self.update_label()
 
         
@@ -817,7 +926,6 @@ class TaskDetailsDialog(QDialog):
         layout.addWidget(close_button, alignment=Qt.AlignRight)
 
     def update_subgoal_status(self, subgoal_id: int, completed: bool):
-        """Updates the subgoal status and recalculates the main goal's progress."""
         if self.db_manager:
             with self.db_manager as db:
                 db.update_subgoal_status(subgoal_id, completed)
@@ -829,12 +937,10 @@ class TaskDetailsDialog(QDialog):
                     progress = int((completed_count / total) * 100) if total > 0 else 0
                     db.update_goal_progress(goal_id, progress)
                     
-                    # Update progress bar and label immediately
                     if self.progress_bar and self.progress_label:
                         self.progress_bar.setValue(progress)
                         self.progress_label.setText(f"{progress}%")
 
-            # Refresh parent view
             if self.parent and hasattr(self.parent, 'load_tasks'):
                 self.parent.load_tasks()
 

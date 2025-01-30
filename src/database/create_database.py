@@ -38,14 +38,10 @@ def create_database():
         description TEXT,
         deadline DATE,
         category_id INTEGER NOT NULL,
-        status TEXT CHECK(status IN ('active', 'completed', 'deleted', 'in_progress')) DEFAULT 'active',
-        priority INTEGER CHECK(priority BETWEEN 1 AND 5) DEFAULT 3,
+        status TEXT CHECK(status IN ('completed', 'deleted', 'in_progress')) DEFAULT 'in_progress',
         parent_id INTEGER DEFAULT NULL,
         period TEXT CHECK(period IN ('5-10 lat', '1 rok', '6 miesięcy', '3 miesiące', 'miesiąc', NULL)),
-        reminder_date TIMESTAMP,
-        tags TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         completed_at TIMESTAMP,
         target_month TEXT,
         FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE,
@@ -59,11 +55,9 @@ def create_database():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         category_id INTEGER NOT NULL,
         score INTEGER CHECK(score BETWEEN 1 AND 10) NOT NULL,
-        notes TEXT,
-        date DATE NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE,
-        UNIQUE(category_id, date)
+        UNIQUE(category_id)
     )
     """)
 
@@ -78,9 +72,6 @@ def create_database():
         relevant TEXT NOT NULL,
         time_bound TEXT NOT NULL,
         progress INTEGER DEFAULT 0 CHECK(progress BETWEEN 0 AND 100),
-        notes TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
     )
     """)
@@ -91,10 +82,7 @@ def create_database():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         text TEXT NOT NULL,
         author TEXT,
-        category TEXT,
-        language TEXT DEFAULT 'pl',
-        is_favorite BOOLEAN DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        category TEXT
     )
     """)
 
@@ -105,7 +93,6 @@ def create_database():
         category_id INTEGER NOT NULL,
         content TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
     )
     """)
@@ -117,7 +104,7 @@ def create_database():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_deadline ON tasks(deadline)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_period ON tasks(period)") 
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_balance_category_date ON balance(category_id, date)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_balance_category_date ON balance(category_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_smart_goals_task ON smart_goals(task_id)")
 
     print("Dodawanie domyślnych kategorii...")
@@ -139,14 +126,14 @@ def create_database():
 
     print("Dodawanie przykładowych cytatów...")
     quotes = [
-        ('Rób, co możesz, z tym, co masz, tam, gdzie jesteś.', 'Theodore Roosevelt', 'motywacja', 'pl', 1),
-        ('Sukces to suma małych wysiłków powtarzanych dzień po dniu.', 'Robert Collier', 'sukces', 'pl', 0),
-        ('Droga do sukcesu jest zawsze w budowie.', 'Lily Tomlin', 'rozwój', 'pl', 0)
+        ('Rób, co możesz, z tym, co masz, tam, gdzie jesteś.', 'Theodore Roosevelt'),
+        ('Sukces to suma małych wysiłków powtarzanych dzień po dniu.', 'Robert Collier'),
+        ('Droga do sukcesu jest zawsze w budowie.', 'Lily Tomlin')
     ]
     
     cursor.executemany("""
-    INSERT OR IGNORE INTO quotes (text, author, category, language, is_favorite) 
-    VALUES (?, ?, ?, ?, ?)
+    INSERT OR IGNORE INTO quotes (text, author) 
+    VALUES (?, ?)
     """, quotes)
 
     print("Zatwierdzanie zmian...")

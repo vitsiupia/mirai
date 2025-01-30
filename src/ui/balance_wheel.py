@@ -366,12 +366,14 @@ class BalanceWheel(QWidget):
             self.categories = db.get_all_categories()
             scores = db.get_balance_scores()
         
+        scores_dict = {score['category']: score['score'] for score in scores}
+        self.scores = scores  # Zachowaj scores do wykorzystania w update_chart
+        
+        # Wyczyść istniejące widgety
         for i in reversed(range(self.categories_container.count())):
             widget = self.categories_container.itemAt(i).widget()
             if widget:
                 widget.setParent(None)
-        
-        scores_dict = {score['category']: score['score'] for score in scores}
         
         self.category_widgets = []
         for category in self.categories:
@@ -383,25 +385,27 @@ class BalanceWheel(QWidget):
         self.update_chart()
         
     def save_and_update(self, category_id, value):
-        current_date = datetime.now().strftime('%Y-%m-%d')
         with self.db_manager as db:
-            db.update_balance_score(category_id, value, current_date)
+            db.update_balance_score(category_id, value)
         self.update_chart()
         
     def update_chart(self):
         self.figure.clear()
-       
+    
+        with self.db_manager as db:
+            scores = db.get_balance_scores()
+            scores_dict = {score['category']: score['score'] for score in scores}
+
         values = []
         labels = []
         for category in self.categories:
-            with self.db_manager as db:
-                scores = db.get_balance_scores()
-                scores_dict = {score['category']: score['score'] for score in scores}
-                values.append(scores_dict.get(category['name'], 1))
-                labels.append(category['name'])
-       
+            values.append(scores_dict.get(category['name'], 1))
+            labels.append(category['name'])
+    
+        if not values:  # Jeśli lista jest pusta
+            return  # Przerywamy aktualizację wykresu
+        
         angles = np.linspace(0, 2*np.pi, len(labels), endpoint=False)
-       
         values.append(values[0])
         angles = np.concatenate((angles, [angles[0]]))
        

@@ -1,40 +1,62 @@
 import sqlite3
 from datetime import datetime
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple  
+import threading
+
 
 class DatabaseManager:
-    def __init__(self, db_path: str = "mirai.db"):
-        self.db_path = db_path
+    _instance = None
+    _lock = threading.Lock()
+    
+    def __new__(cls, db_path: str = "mirai.db"):
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+                cls._instance.db_path = db_path
+                cls._instance.connection = None
+                cls._instance.cursor = None
+                cls._instance._initialize()
+            return cls._instance
+    
+    def _initialize(self):
+        """Inicjalizacja instancji (wywoływana tylko raz)"""
+        self.db_path = "mirai.db"
         self.connection = None
         self.cursor = None
 
     def connect(self):
         """Nawiązuje połączenie z bazą danych."""
-        self.connection = sqlite3.connect(self.db_path)
-        self.cursor = self.connection.cursor()
-        self.cursor.execute("PRAGMA foreign_keys = ON")
+        if self.connection is None:
+            self.connection = sqlite3.connect(self.db_path)
+            self.cursor = self.connection.cursor()
+            self.cursor.execute("PRAGMA foreign_keys = ON")
 
     def disconnect(self):
         """Zamyka połączenie z bazą danych."""
         if self.connection:
             self.connection.close()
+            self.connection = None
+            self.cursor = None
 
     def __enter__(self):
-        """Umożliwia używanie with."""
         self.connect()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Zamyka połączenie po wyjściu z with."""
         self.disconnect()
 
-    # Operacje na zadaniach
+    @classmethod
+    def get_instance(cls, db_path: str = "mirai.db") -> 'DatabaseManager':
+        """Metoda dostępowa do instancji Singletona"""
+        return cls(db_path)
+    
+
     def add_task(self, title: str, category_id: int, description: str = None, 
-                 deadline: str = None, parent_id: int = None) -> int:
+                deadline: str = None, parent_id: int = None) -> int:
         """Dodaje nowe zadanie i zwraca jego ID."""
         query = """
-        INSERT INTO tasks (title, category_id, description, deadline, parent_id)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO tasks (title, category_id, description, deadline, parent_id, status)
+        VALUES (?, ?, ?, ?, ?, 'in_progress')
         """
         self.cursor.execute(query, (title, category_id, description, deadline, parent_id))
         self.connection.commit()
@@ -43,10 +65,10 @@ class DatabaseManager:
     def get_tasks_by_category(self, category_id: int) -> List[Dict]:
         """Pobiera wszystkie aktywne zadania dla danej kategorii."""
         query = """
-        SELECT id, title, description, deadline, status, priority
+        SELECT id, title, description, deadline, status
         FROM tasks
         WHERE category_id = ? AND status != 'deleted'
-        ORDER BY priority DESC, deadline
+        ORDER BY deadline
         """
         self.cursor.execute(query, (category_id,))
         tasks = []
@@ -56,8 +78,7 @@ class DatabaseManager:
                 'title': row[1],
                 'description': row[2],
                 'deadline': row[3],
-                'status': row[4],
-                'priority': row[5]
+                'status': row[3],
             })
         return tasks
 
@@ -102,39 +123,29 @@ class DatabaseManager:
             }
         return None
     
-    def update_balance_score(self, category_id: int, score: int, 
-                           date: str = None) -> bool:
+    def update_balance_score(self, category_id: int, score: int) -> bool:
         """Aktualizuje wynik w kole balansu."""
-        if date is None:
-            date = datetime.now().strftime('%Y-%m-%d')
-        
         query = """
-        INSERT OR REPLACE INTO balance (category_id, score, date)
-        VALUES (?, ?, ?)
+        INSERT OR REPLACE INTO balance (category_id, score)
+        VALUES (?, ?)
         """
-        self.cursor.execute(query, (category_id, score, date))
+        self.cursor.execute(query, (category_id, score))
         self.connection.commit()
         return self.cursor.rowcount > 0
 
-    def get_balance_scores(self, date: str = None) -> List[Dict]:
-        """Pobiera wyniki koła balansu dla danej daty."""
-        if date is None:
-            date = datetime.now().strftime('%Y-%m-%d')
-            
+    def get_balance_scores(self) -> List[Dict]:
+        """Pobiera aktualne wyniki koła balansu."""
         query = """
         SELECT c.name, b.score
         FROM categories c
-        LEFT JOIN balance b ON c.id = b.category_id AND b.date = ?
+        LEFT JOIN balance b ON c.id = b.category_id
         ORDER BY c.sort_order
         """
-        self.cursor.execute(query, (date,))
-        scores = []
-        for row in self.cursor.fetchall():
-            scores.append({
-                'category': row[0],
-                'score': row[1] if row[1] is not None else 0
-            })
-        return scores
+        self.cursor.execute(query)
+        return [{
+            'category': row[0],
+            'score': row[1] if row[1] is not None else 0
+        } for row in self.cursor.fetchall()]
 
     def get_random_quote(self) -> Optional[Dict]:
         """Pobiera losowy cytat."""
@@ -169,11 +180,10 @@ class DatabaseManager:
         return categories
     
     def add_smart_goal(self, goal_data: dict) -> int:
-        """Adds a new SMART goal and its subgoals."""
         try:
             task_query = """
-            INSERT INTO tasks (title, category_id, period, target_month)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO tasks (title, category_id, period, target_month, status)
+            VALUES (?, ?, ?, ?, 'in_progress')
             """
             self.cursor.execute(task_query, (
                 goal_data['title'],
@@ -205,7 +215,7 @@ class DatabaseManager:
                 ) VALUES (?, ?, ?, ?, ?, ?)
                 """
                 for subgoal in goal_data['subgoals']:
-                    status = 'completed' if subgoal.get('completed', False) else 'active'
+                    status = 'completed' if subgoal.get('completed', False) else 'in_progress'
                     self.cursor.execute(subgoal_query, (
                         subgoal['title'],
                         goal_data['category_id'],
@@ -221,7 +231,7 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error adding SMART goal: {e}")
             self.connection.rollback()
-            raise
+        raise
 
     def get_smart_goals_by_period(self, category_id, period):
         """Gets all SMART goals for a category and period."""
@@ -277,7 +287,7 @@ class DatabaseManager:
 
     def update_subgoal_status(self, subgoal_id, completed):
         """Updates the status of a subgoal."""
-        status = 'completed' if completed else 'active'
+        status = 'completed' if completed else 'in_progress'
         query = "UPDATE tasks SET status = ? WHERE id = ?"
         self.cursor.execute(query, (status, subgoal_id))
         self.connection.commit()
@@ -314,8 +324,7 @@ class DatabaseManager:
         """Aktualizuje postęp głównego celu."""
         query = """
         UPDATE smart_goals
-        SET progress = ?,
-            updated_at = CURRENT_TIMESTAMP
+        SET progress = ?
         WHERE task_id = ?
         """
         self.cursor.execute(query, (progress, goal_id))
@@ -343,8 +352,7 @@ class DatabaseManager:
                 measurable = ?,
                 achievable = ?,
                 relevant = ?,
-                time_bound = ?,
-                updated_at = CURRENT_TIMESTAMP
+                time_bound = ?
             WHERE task_id = ?
             """
             self.cursor.execute(smart_query, (
@@ -365,7 +373,7 @@ class DatabaseManager:
                 ) VALUES (?, ?, ?, ?, ?)
                 """
                 for subgoal in goal_data['subgoals']:
-                    status = 'completed' if subgoal.get('completed', False) else 'active'
+                    status = 'completed' if subgoal.get('completed', False) else 'in_progress'
                     self.cursor.execute(subgoal_query, (
                         subgoal['title'],
                         goal_data['category_id'],
@@ -442,7 +450,7 @@ class DatabaseManager:
         """Aktualizuje istniejącą refleksję dla kategorii."""
         query = """
         UPDATE reflections 
-        SET content = ?, updated_at = CURRENT_TIMESTAMP
+        SET content = ?
         WHERE category_id = ?
         """
         self.cursor.execute(query, (content, category_id))
@@ -452,7 +460,7 @@ class DatabaseManager:
     def get_reflection(self, category_id: int) -> Optional[Dict]:
         """Pobiera refleksję dla danej kategorii."""
         query = """
-        SELECT id, content, created_at, updated_at
+        SELECT id, content, created_at
         FROM reflections
         WHERE category_id = ?
         """
@@ -462,15 +470,14 @@ class DatabaseManager:
             return {
                 'id': row[0],
                 'content': row[1],
-                'created_at': row[2],
-                'updated_at': row[3]
+                'created_at': row[2]
             }
         return None
 
     def get_all_reflections(self) -> List[Dict]:
         """Pobiera wszystkie refleksje wraz z nazwami kategorii."""
         query = """
-        SELECT r.id, r.category_id, c.name, r.content, r.created_at, r.updated_at
+        SELECT r.id, r.category_id, c.name, r.content, r.created_at
         FROM reflections r
         JOIN categories c ON r.category_id = c.id
         ORDER BY c.sort_order
@@ -483,11 +490,10 @@ class DatabaseManager:
                 'category_id': row[1],
                 'category_name': row[2],
                 'content': row[3],
-                'created_at': row[4],
-                'updated_at': row[5]
+                'created_at': row[4]
             })
-        return reflections  
-    
+        return reflections
+        
     def delete_reflection(self, category_id: int) -> bool:
         """Usuwa refleksję dla danej kategorii."""
         query = "DELETE FROM reflections WHERE category_id = ?"
@@ -507,7 +513,7 @@ class DatabaseManager:
         target_month = f"{month_mapping[start_date_obj.month]} {start_date_obj.year}"
         
         query = """
-        SELECT id, title, description, deadline, status, priority
+        SELECT id, title, description, deadline, status
         FROM tasks
         WHERE category_id = ? 
         AND status != 'deleted'
@@ -520,7 +526,7 @@ class DatabaseManager:
                 WHERE sg.task_id = tasks.id
             ) AND target_month = ?)
         )
-        ORDER BY priority DESC, deadline
+        ORDER BY deadline
         """
         
         self.cursor.execute(query, (category_id, start_date, end_date, target_month))
@@ -537,7 +543,6 @@ class DatabaseManager:
                 'description': row[2],
                 'deadline': row[3],
                 'status': row[4],
-                'priority': row[5],
                 'is_smart_goal': is_smart_goal
             })
         return tasks
@@ -553,7 +558,7 @@ class DatabaseManager:
         Returns:
             int: ID nowego podcelu
         """
-        status = 'completed' if completed else 'active'
+        status = 'completed' if completed else 'in_progress'
         
         query = """
         SELECT category_id, period
