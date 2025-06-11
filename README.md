@@ -1,4 +1,4 @@
-Mirai – Aplikacja do planowania celów długoterminowych
+📅 Mirai – Aplikacja do planowania celów długoterminowych
 
 Mirai to desktopowa aplikacja stworzona w języku Python z wykorzystaniem bibliotek PyQt5 i Matplotlib. Jej celem jest wspieranie użytkowników w skutecznym planowaniu i realizacji długoterminowych celów życiowych, zgodnie z metodologią SMART oraz z wykorzystaniem narzędzia Koło Balansu (Wheel of Life).
 📌 Funkcjonalności
