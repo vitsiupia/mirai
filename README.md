@@ -27,7 +27,7 @@ Gamifikacja – śledzenie postępów i utrzymywanie motywacji
 💻 Instalacja
 Wymagania:
 - Python 3.8+
-- 
+
 Instalacja zależności:
 pip install -r requirements.txt
 
